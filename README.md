@@ -48,7 +48,7 @@
 使用 `git` 克隆本仓库到您的本地机器：
 
 ```bash
-git clone https://github.com/your-username/TenCyclesofFate.git
+git clone https://github.com/CassiopeiaCode/TenCyclesofFate.git
 cd TenCyclesofFate
 ```
 
