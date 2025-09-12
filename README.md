@@ -82,11 +82,11 @@ pip install -r backend/requirements.txt
     # OpenAI API Settings
     # 必填。你的 OpenAI API 密钥。
     OPENAI_API_KEY="your_openai_api_key_here"
-    # 可选。如果你使用代理或第三方服务，请修改此 URL。
+    # 如果你使用代理或第三方服务，请修改此 URL。
     OPENAI_BASE_URL="https://api.openai.com/v1"
-    # 可选。指定用于生成游戏内容的模型。
+    # 指定用于生成游戏内容的模型。
     OPENAI_MODEL="gpt-4o"
-    # 可选。指定用于作弊检查的模型。
+    # 指定用于作弊检查的模型。
     OPENAI_MODEL_CHEAT_CHECK="gpt-3.5-turbo"
 
     # JWT Settings for OAuth2
@@ -121,7 +121,7 @@ pip install -r backend/requirements.txt
 
 ### 5. 运行应用
 
-我们提供了一个 `run.sh` 脚本来方便地启动应用。
+提供了一个 `run.sh` 脚本来方便地启动应用。
 
 首先，给脚本添加执行权限：
 ```bash
