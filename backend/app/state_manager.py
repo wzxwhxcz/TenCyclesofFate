@@ -114,10 +114,10 @@ def get_most_recent_sessions(limit: int = 10) -> list[dict]:
     results = []
     for s in sorted_sessions[:limit]:
         player_id = s["player_id"]
-        # Mask the player_id for display if it's long enough
+        # Mask the player_id for display, showing only the first and last characters
         display_name = (
-            f"{player_id[:4]}...{player_id[-4:]}"
-            if len(player_id) > 8
+            f"{player_id[0]}...{player_id[-1]}"
+            if len(player_id) > 2
             else player_id
         )
         results.append({
