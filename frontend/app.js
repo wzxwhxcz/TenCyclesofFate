@@ -95,14 +95,14 @@ const socketManager = {
                 }
             };
             this.socket.onclose = () => { console.log("Reconnecting..."); showLoading(true); setTimeout(() => this.connect(), 5000); };
-            this.socket.onerror = (error) => { console.error("WebSocket error:", error); DOMElements.loginError.textContent = '无法连接。'; reject(error); };
+            this.socket.onerror = (error) => { console.error("WebSocket error:", error); DOMElements.loginError.textContent = '鏃犳硶杩炴帴銆�'; reject(error); };
         });
     },
     sendAction(action) {
         if (this.socket && this.socket.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify({ action }));
         } else {
-            alert("连接已断开，请刷新。");
+            alert("杩炴帴宸叉柇寮€锛岃�鍒锋柊銆�");
         }
     }
 };
@@ -134,7 +134,7 @@ function render() {
         const p = document.createElement('div');
         p.innerHTML = marked.parse(text);
         if (text.startsWith('> ')) p.classList.add('user-input-message');
-        else if (text.startsWith('【')) p.classList.add('system-message');
+        else if (text.startsWith('銆�')) p.classList.add('system-message');
         historyContainer.appendChild(p);
     });
     DOMElements.narrativeWindow.innerHTML = '';
@@ -147,16 +147,16 @@ function render() {
     startButton.classList.toggle('hidden', is_in_trial || daily_success_achieved || opportunities_remaining < 0);
 
     if (daily_success_achieved) {
-         startButton.textContent = "今日功德圆满";
+         startButton.textContent = "浠婃棩鍔熷痉鍦嗘弧";
          startButton.disabled = true;
     } else if (opportunities_remaining <= 0) {
-        startButton.textContent = "机缘已尽";
+        startButton.textContent = "鏈虹紭宸插敖";
         startButton.disabled = true;
     } else {
         if (opportunities_remaining === 10) {
-            startButton.textContent = "开始第一次试炼";
+            startButton.textContent = "寮€濮嬬�涓€娆¤瘯鐐�";
         } else {
-            startButton.textContent = "开启下一次试炼";
+            startButton.textContent = "寮€鍚�笅涓€娆¤瘯鐐�";
         }
         startButton.disabled = appState.gameState.is_processing;
     }
@@ -168,7 +168,7 @@ function renderCharacterStatus() {
     container.innerHTML = ''; // Clear previous content
 
     if (!current_life) {
-        container.textContent = '静待天命...';
+        container.textContent = '闈欏緟澶╁懡...';
         return;
     }
 
@@ -182,9 +182,23 @@ function renderCharacterStatus() {
         content.classList.add('details-content');
         
         if (typeof value === 'object' && value !== null) {
-            const pre = document.createElement('pre');
-            pre.textContent = JSON.stringify(value, null, 2);
-            content.appendChild(pre);
+            // Instead of pre, create a more structured view
+            Object.entries(value).forEach(([propKey, propValue]) => {
+                const propDiv = document.createElement('div');
+                propDiv.classList.add('property-item');
+                
+                const keySpan = document.createElement('span');
+                keySpan.classList.add('property-key');
+                keySpan.textContent = `${propKey}:`;
+                
+                const valueSpan = document.createElement('span');
+                valueSpan.classList.add('property-value');
+                valueSpan.textContent = propValue;
+                
+                propDiv.appendChild(keySpan);
+                propDiv.appendChild(valueSpan);
+                content.appendChild(propDiv);
+            });
         } else {
             content.textContent = value;
         }
@@ -195,7 +209,7 @@ function renderCharacterStatus() {
 }
 
 function renderRollEvent(rollEvent) {
-    DOMElements.rollType.textContent = `判定: ${rollEvent.type}`;
+    DOMElements.rollType.textContent = `鍒ゅ畾: ${rollEvent.type}`;
     DOMElements.rollTarget.textContent = `(<= ${rollEvent.target})`;
     DOMElements.rollOutcome.textContent = rollEvent.outcome;
     DOMElements.rollOutcome.className = `outcome-${rollEvent.outcome}`;
@@ -216,7 +230,7 @@ function handleAction(actionOverride = null) {
     if (!action) return;
 
     // Special case for starting a trial to prevent getting locked out by is_processing flag
-    if (action === "开始试炼") {
+    if (action === "寮€濮嬭瘯鐐�") {
         // Allow starting a new trial even if the previous async task is in its finally block
     } else {
         // For all other actions, prevent sending if another action is in flight.
@@ -260,7 +274,7 @@ function init() {
     DOMElements.logoutButton.addEventListener('click', handleLogout);
     DOMElements.actionButton.addEventListener('click', () => handleAction());
     DOMElements.actionInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAction(); });
-    DOMElements.startTrialButton.addEventListener('click', () => handleAction("开始试炼"));
+    DOMElements.startTrialButton.addEventListener('click', () => handleAction("寮€濮嬭瘯鐐�"));
 }
 
 // --- Start the App ---

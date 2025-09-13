@@ -259,6 +259,21 @@ body::after {
     background-color: rgba(0,0,0,0.01);
 }
 
+.property-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.2rem 0;
+}
+
+.property-key {
+    font-weight: bold;
+    color: var(--title-color);
+}
+
+.property-value {
+    color: var(--text-color);
+}
+
 
 #main-content {
     grid-area: main;
