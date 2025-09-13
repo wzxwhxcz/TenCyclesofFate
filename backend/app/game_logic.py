@@ -3,6 +3,7 @@ import math
 import random
 import json
 import asyncio
+import time
 import traceback
 from copy import deepcopy
 from datetime import date
@@ -431,6 +432,7 @@ async def _process_player_action_async(user_info: dict, action: str):
 
         session["roll_event"] = None
         session["is_processing"] = False
+        session["last_modified"] = time.time()
         await state_manager.save_session(player_id, session)
         logger.info(f"Async action task for {player_id} finished.")
 
