@@ -102,10 +102,13 @@ function renderPlayerList() {
     liveState.playerList.forEach(player => {
         const playerDiv = document.createElement('div');
         playerDiv.className = 'player-list-item';
+        // Compare with the real player_id for active state
         if (player.player_id === liveState.watchingPlayerId) {
             playerDiv.classList.add('active');
         }
-        playerDiv.textContent = player.player_id;
+        // Display the masked name
+        playerDiv.textContent = player.display_name;
+        // Use the real player_id for the watch action
         playerDiv.onclick = () => socketManager.watchPlayer(player.player_id);
         fragment.appendChild(playerDiv);
     });

@@ -43,6 +43,12 @@ class ConnectionManager:
                 }
             }
 
+            # For privacy, remove player's own inputs from the live broadcast
+            if live_payload["data"]["display_history"]:
+                live_payload["data"]["display_history"] = [
+                    msg for msg in live_payload["data"]["display_history"] if not msg.strip().startswith("> ")
+                ]
+
             # Mask the redemption code if it exists
             if original_session.get("redemption_code"):
                 full_code = original_session["redemption_code"]
