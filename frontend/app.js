@@ -162,6 +162,34 @@ function render() {
     }
 }
 
+function renderValue(container, value, level = 0) {
+    if (Array.isArray(value)) {
+        value.forEach(item => renderValue(container, item, level + 1));
+    } else if (typeof value === 'object' && value !== null) {
+        const subContainer = document.createElement('div');
+        subContainer.style.paddingLeft = `${level * 10}px`;
+        Object.entries(value).forEach(([key, val]) => {
+            const propDiv = document.createElement('div');
+            propDiv.classList.add('property-item');
+            
+            const keySpan = document.createElement('span');
+            keySpan.classList.add('property-key');
+            keySpan.textContent = `${key}: `;
+            propDiv.appendChild(keySpan);
+
+            // Recursively render the value
+            renderValue(propDiv, val, level + 1);
+            subContainer.appendChild(propDiv);
+        });
+        container.appendChild(subContainer);
+    } else {
+        const valueSpan = document.createElement('span');
+        valueSpan.classList.add('property-value');
+        valueSpan.textContent = value;
+        container.appendChild(valueSpan);
+    }
+}
+
 function renderCharacterStatus() {
     const { current_life } = appState.gameState;
     const container = DOMElements.characterStatus;
@@ -181,27 +209,7 @@ function renderCharacterStatus() {
         const content = document.createElement('div');
         content.classList.add('details-content');
         
-        if (typeof value === 'object' && value !== null) {
-            // Instead of pre, create a more structured view
-            Object.entries(value).forEach(([propKey, propValue]) => {
-                const propDiv = document.createElement('div');
-                propDiv.classList.add('property-item');
-                
-                const keySpan = document.createElement('span');
-                keySpan.classList.add('property-key');
-                keySpan.textContent = `${propKey}:`;
-                
-                const valueSpan = document.createElement('span');
-                valueSpan.classList.add('property-value');
-                valueSpan.textContent = propValue;
-                
-                propDiv.appendChild(keySpan);
-                propDiv.appendChild(valueSpan);
-                content.appendChild(propDiv);
-            });
-        } else {
-            content.textContent = value;
-        }
+        renderValue(content, value);
         
         details.appendChild(content);
         container.appendChild(details);
