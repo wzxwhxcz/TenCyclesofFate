@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 from .websocket_manager import manager as websocket_manager
 from .live_system import live_manager
+from . import security
 
 # --- Module-level State ---
 SESSIONS: dict[str, dict] = {}
@@ -110,18 +111,23 @@ def get_most_recent_sessions(limit: int = 10) -> list[dict]:
     # Sort sessions by 'last_modified' in descending order
     sorted_sessions = sorted(valid_sessions, key=lambda s: s["last_modified"], reverse=True)
     
-    # Return the top 'limit' sessions, including both real and display IDs
+    # Return the top 'limit' sessions, with encrypted player IDs
     results = []
     for s in sorted_sessions[:limit]:
         player_id = s["player_id"]
-        # Mask the player_id for display, showing only the first and last characters
+        encrypted_id = security.encrypt_player_id(player_id)
+        
+        # The display name is now also the encrypted ID for simplicity,
+        # or we can still use a masked version of the real ID if preferred.
+        # Let's stick to a masked real ID for better readability.
         display_name = (
             f"{player_id[0]}...{player_id[-1]}"
             if len(player_id) > 2
             else player_id
         )
+
         results.append({
-            "player_id": player_id,
+            "player_id": encrypted_id, # Send encrypted ID to the frontend
             "display_name": display_name,
             "last_modified": s["last_modified"]
         })

@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 
-from . import auth, game_logic, state_manager
+from . import auth, game_logic, state_manager, security
 from .websocket_manager import manager as websocket_manager
 from .live_system import live_manager
 from .config import settings
@@ -184,8 +184,13 @@ async def live_websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_json()
             action = data.get("action")
             if action == "watch":
-                target_id = data.get("player_id")
-                if target_id:
+                encrypted_id = data.get("player_id")
+                if encrypted_id:
+                    target_id = security.decrypt_player_id(encrypted_id)
+                    if not target_id:
+                        logger.warning(f"Received invalid encrypted ID from {viewer_id}")
+                        continue
+                    
                     live_manager.add_viewer(viewer_id, target_id)
                     # Send the current state of the watched player immediately
                     target_state = await state_manager.get_session(target_id)
