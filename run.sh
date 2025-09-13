@@ -3,6 +3,9 @@
 cd /mydata/python/ElysiaGameImmortal
 # Load environment variables from .env file if it exists
 if [ -f backend/.env ]; then
+  # Convert CRLF to LF for cross-platform compatibility
+  # This prevents issues when .env is edited on Windows and run on Linux/macOS
+  sed -i 's/\r$//' backend/.env
   # Using a safer method to export variables
   set -o allexport
   source backend/.env

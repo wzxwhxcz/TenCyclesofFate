@@ -9,13 +9,14 @@ from fastapi import (
     FastAPI, APIRouter, Depends, HTTPException, status,
     WebSocket, WebSocketDisconnect, Request
 )
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 
 from . import auth, game_logic, state_manager
 from .websocket_manager import manager as websocket_manager
+from .live_system import live_manager
 from .config import settings
 
 # --- Logging Configuration ---
@@ -109,6 +110,11 @@ async def logout():
     return response
 
 # --- Game Routes ---
+@api_router.get("/live/players")
+async def get_live_players():
+    """Returns a list of the most recently active players for the live view."""
+    return state_manager.get_most_recent_sessions(limit=10)
+
 @api_router.post("/game/init")
 async def init_game(
     current_user: Annotated[dict, Depends(auth.get_current_active_user)],
@@ -156,6 +162,42 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect:
         websocket_manager.disconnect(username)
+
+@api_router.websocket("/live/ws")
+async def live_websocket_endpoint(websocket: WebSocket):
+    """Handles WebSocket connections for the live viewing system."""
+    token = websocket.cookies.get("token")
+    if not token:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Missing token")
+        return
+    try:
+        user_info = await auth.get_current_user(token)
+        viewer_id = user_info["username"]
+    except HTTPException:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Token validation failed")
+        return
+
+    await websocket_manager.connect(websocket, viewer_id)
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            action = data.get("action")
+            if action == "watch":
+                target_id = data.get("player_id")
+                if target_id:
+                    live_manager.add_viewer(viewer_id, target_id)
+                    # Send the current state of the watched player immediately
+                    target_state = await state_manager.get_session(target_id)
+                    if target_state:
+                        await websocket_manager.send_json_to_player(
+                            viewer_id, {"type": "live_update", "data": target_state}
+                        )
+
+    except WebSocketDisconnect:
+        websocket_manager.disconnect(viewer_id)
+        live_manager.remove_viewer(viewer_id)
+
 
 # --- Include API Router and Mount Static Files ---
 app.include_router(api_router)

@@ -1,0 +1,94 @@
+/* --- Live View Specific Layout --- */
+#live-view.view.active {
+    /* Override conflicting styles from style.css with high specificity and !important */
+    display: grid !important;
+    flex-direction: unset;
+
+    padding: 0;
+    grid-template-columns: 240px 1fr 240px; /* Three-column layout */
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+        "header header header"
+        "players main status";
+    /* Remove gap and background color to eliminate harsh lines */
+}
+
+#live-view #game-header,
+#live-view #status-panel,
+#live-view #main-content,
+#live-view #live-character-panel {
+    background: var(--panel-bg);
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+/* Add consistent panel titles */
+#live-view #status-panel p,
+#live-view #live-character-panel p {
+    font-family: var(--font-sans);
+    font-weight: bold;
+    color: var(--title-color);
+    font-size: 1.2rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+    margin-top: 0;
+}
+
+
+#live-view #game-header {
+    grid-area: header;
+    border-bottom: 2px solid #5a4a3a;
+}
+
+#live-view #status-panel {
+    grid-area: players;
+    border-right: 2px solid #5a4a3a;
+}
+
+#live-view #main-content {
+    grid-area: main;
+    padding: 0; /* Remove padding to allow narrative window to fill */
+}
+
+#live-view #live-character-panel {
+    grid-area: status;
+    /* border-left is not needed as main-content doesn't have a right border */
+}
+
+#player-list .player-list-item {
+    padding: 0.8rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    transition: background-color 0.2s ease;
+}
+
+#player-list .player-list-item:hover {
+    background-color: rgba(0,0,0,0.05);
+}
+
+#player-list .player-list-item.active {
+    background-color: rgba(106, 139, 106, 0.2); /* Softer jade green */
+    color: var(--title-color);
+    font-weight: bold;
+    border-right: 4px solid var(--primary-color);
+}
+
+/* Responsive adjustments for live view */
+@media (max-width: 1000px) {
+    #live-view {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr auto;
+        grid-template-areas:
+            "header"
+            "players"
+            "main"
+            "status";
+    }
+
+    #live-view #status-panel,
+    #live-view #live-character-panel {
+        border: none;
+        border-bottom: 2px solid #5a4a3a;
+        max-height: 150px;
+    }
+}

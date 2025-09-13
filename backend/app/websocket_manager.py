@@ -30,10 +30,11 @@ class ConnectionManager:
             return
 
         payload_to_send = data
-        if data and data.get("type") == "full_state":
+        if data and data.get("type") in ["full_state", "live_update"]:
             # Deep copy to avoid modifying the original session object in memory
             payload_to_send = copy.deepcopy(data)
-            payload_to_send["data"].pop("internal_history", None)
+            if payload_to_send.get("data"):
+                payload_to_send["data"].pop("internal_history", None)
         
         try:
             # 1. Serialize dict to JSON string

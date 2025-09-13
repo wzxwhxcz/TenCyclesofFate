@@ -1,8 +1,10 @@
 import asyncio
 import json
 import logging
+import time
 from pathlib import Path
 from .websocket_manager import manager as websocket_manager
+from .live_system import live_manager
 
 # --- Module-level State ---
 SESSIONS: dict[str, dict] = {}
@@ -68,19 +70,18 @@ async def save_session(player_id: str, session_data: dict):
     #     except (TypeError, ValueError) as e:
     #         logger.warning(f"Could not compare sessions for player {player_id}: {e}")
     
+    session_data["last_modified"] = time.time()
     SESSIONS[player_id] = session_data
     _sessions_modified = True
     
-    # Push the new state to the client via WebSocket
-    # await websocket_manager.send_json_to_player(
-    #     player_id, {"type": "full_state", "data": session_data}
-    # )
-    
-    asyncio.create_task(
+    # Create tasks for both the player and any live viewers
+    tasks = [
         websocket_manager.send_json_to_player(
             player_id, {"type": "full_state", "data": session_data}
-        )
-    )
+        ),
+        live_manager.broadcast_state_update(player_id, session_data)
+    ]
+    asyncio.gather(*tasks)
 
 
 async def get_last_n_inputs(player_id: str, n: int) -> list[str]:
@@ -100,6 +101,20 @@ async def get_last_n_inputs(player_id: str, n: int) -> list[str]:
 async def get_session(player_id: str) -> dict | None:
     """Gets the entire session object, which might contain metadata."""
     return SESSIONS.get(player_id)
+
+def get_most_recent_sessions(limit: int = 10) -> list[dict]:
+    """Gets the most recently active sessions, sorted by last_modified."""
+    # Filter out sessions that don't have the 'last_modified' timestamp
+    valid_sessions = [s for s in SESSIONS.values() if "last_modified" in s]
+    
+    # Sort sessions by 'last_modified' in descending order
+    sorted_sessions = sorted(valid_sessions, key=lambda s: s["last_modified"], reverse=True)
+    
+    # Return the top 'limit' sessions, only including player_id and last_modified
+    return [
+        {"player_id": s["player_id"], "last_modified": s["last_modified"]}
+        for s in sorted_sessions[:limit]
+    ]
 
 async def create_or_get_session(player_id: str) -> dict:
     """Creates a session if it doesn't exist, and returns it."""

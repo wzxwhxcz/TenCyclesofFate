@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>天道直播</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="live.css">
+    <!-- Add Marked.js library for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Add pako for Gzip decompression -->
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+</head>
+
+<body>
+    <div id="app-container">
+        <div id="live-view" class="view active">
+            <header id="game-header">
+                <h1>天道直播</h1>
+                <div id="game-status">
+                    <a href="/" class="login-button">返回游戏</a>
+                </div>
+            </header>
+
+            <aside id="status-panel">
+                <p>【天机榜】</p>
+                <div id="player-list">
+                    <!-- List of active players will be rendered here -->
+                </div>
+            </aside>
+
+            <main id="main-content">
+                <div id="narrative-window">
+                    <div class="system-message">
+                        <p>请从左侧【天机榜】选择一位道友进行观摩。</p>
+                    </div>
+                </div>
+            </main>
+
+            <aside id="live-character-panel">
+                <p>【人物业力】</p>
+                <div id="character-status">
+                    <!-- Character status will be rendered here -->
+                </div>
+            </aside>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loading-spinner" class="spinner-overlay" style="display: none;">
+            <div class="spinner"></div>
+        </div>
+    </div>
+    <script type="module" src="live.js"></script>
+</body>
+
+</html>
