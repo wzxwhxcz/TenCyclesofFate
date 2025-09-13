@@ -30,8 +30,37 @@ class ConnectionManager:
             return
 
         payload_to_send = data
-        if data and data.get("type") in ["full_state", "live_update"]:
-            # Deep copy to avoid modifying the original session object in memory
+        # For live viewers, create a stripped-down and secure payload
+        if data and data.get("type") == "live_update":
+            original_session = data.get("data", {})
+            
+            # Create a safe, minimal payload for live view
+            live_payload = {
+                "type": "live_update",
+                "data": {
+                    "display_history": copy.deepcopy(original_session.get("display_history", [])),
+                    "current_life": copy.deepcopy(original_session.get("current_life"))
+                }
+            }
+
+            # Mask the redemption code if it exists
+            if original_session.get("redemption_code"):
+                full_code = original_session["redemption_code"]
+                masked_code = f"{full_code[:1]}...{full_code[-1:]}"
+                
+                # Also mask the code in the last message of the display history
+                if live_payload["data"]["display_history"]:
+                    try:
+                        last_message = live_payload["data"]["display_history"][-1]
+                        if full_code in last_message:
+                            live_payload["data"]["display_history"][-1] = last_message.replace(full_code, masked_code)
+                    except (IndexError, TypeError):
+                        pass # Ignore if history is empty or not a list
+            
+            payload_to_send = live_payload
+
+        # For the actual player, just remove the internal history
+        elif data and data.get("type") == "full_state":
             payload_to_send = copy.deepcopy(data)
             if payload_to_send.get("data"):
                 payload_to_send["data"].pop("internal_history", None)

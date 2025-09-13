@@ -198,8 +198,8 @@ async function initializeLiveView() {
         liveState.playerList = players;
         render();
     } catch (error) {
-        console.error("Initialization failed:", error);
-        DOMElements.playerList.innerHTML = '<div class="error-message">无法加载天机榜</div>';
+        console.error("Initialization failed, redirecting to home:", error);
+        window.location.href = '/';
     } finally {
         showLoading(false);
     }
