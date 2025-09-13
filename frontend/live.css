@@ -75,20 +75,41 @@
 
 /* Responsive adjustments for live view */
 @media (max-width: 1000px) {
-    #live-view {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto 1fr auto;
-        grid-template-areas:
-            "header"
-            "players"
-            "main"
-            "status";
+    #live-view.view.active {
+        display: flex !important;
+        flex-direction: column;
     }
 
     #live-view #status-panel,
     #live-view #live-character-panel {
         border: none;
         border-bottom: 2px solid #5a4a3a;
-        max-height: 150px;
+        flex-shrink: 0;
+    }
+
+    #live-view #main-content {
+        flex-grow: 1;
+        min-height: 200px; /* Ensure it has a minimum height */
+    }
+
+    #live-view #status-panel details,
+    #live-view #live-character-panel details {
+        width: 100%;
+    }
+
+    #live-view #status-panel summary,
+    #live-view #live-character-panel summary {
+        font-family: var(--font-sans);
+        font-weight: bold;
+        color: var(--title-color);
+        font-size: 1.2rem;
+        padding: 0.5rem 0;
+        cursor: pointer;
+        outline: none;
+    }
+
+    #live-view #status-panel summary::marker,
+    #live-view #live-character-panel summary::marker {
+        color: var(--primary-color);
     }
 }
