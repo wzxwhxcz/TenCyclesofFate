@@ -28,8 +28,8 @@ def generate_and_insert_redemption_code(user_id: int, quota: float, name: str) -
         
         cursor.execute(
             """
-            INSERT INTO redemptions (user_id, key, status, name, quota, created_time)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO redemptions (user_id, `key`, status, name, quota, created_time)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """,
             (user_id, redemption_key, 1, name, int(quota), current_timestamp)
         )

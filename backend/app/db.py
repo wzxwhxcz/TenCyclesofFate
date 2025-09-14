@@ -13,7 +13,9 @@ def get_db_connection():
         parsed_url = urlparse(db_url)
 
         if parsed_url.scheme == "sqlite":
-            db_path = parsed_url.path.lstrip('/')
+            # The user can override the DB path via the DATABASE_URL in .env
+            # We need to strip the "sqlite:///" prefix for the connect function.
+            db_path = settings.DATABASE_URL.replace("sqlite:///", "")
             conn = sqlite3.connect(db_path)
             logger.info(f"Successfully connected to SQLite database at: {db_path}")
             return conn
