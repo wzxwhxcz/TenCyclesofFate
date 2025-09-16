@@ -88,6 +88,7 @@
 *   `target`: 成功阈值（投骰结果≤target即为成功，建议范围10-75）。
 *   `description`: 对判定行为的简短描述。
 *   此时**必须**只输出`narrative`和`roll_request`，**禁止**输出`state_update`。
+*   请积极使用判定，平均6回合至少要有一次判定
 
 **判定难度设定指南：**
 *   **成功概率计算公式**: 成功率 = target ÷ sides × 100%
