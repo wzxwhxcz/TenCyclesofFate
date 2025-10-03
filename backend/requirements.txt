@@ -13,3 +13,4 @@ httpx
 python-dotenv
 sqlalchemy
 aiosqlite
+mysql-connector-python
