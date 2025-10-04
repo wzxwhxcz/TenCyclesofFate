@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台</title>
+  <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="admin.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+</head>
+<body>
+  <div id="app-container" class="admin">
+    <header id="game-header">
+      <h1>管理后台</h1>
+      <div id="game-status">
+        <a href="/" class="logout-button" style="text-decoration: none;">返回游戏</a>
+      </div>
+    </header>
+
+    <div class="admin-layout">
+      <aside class="admin-sidebar">
+        <div class="admin-actions">
+          <button id="refresh-sessions">刷新最近会话</button>
+        </div>
+        <div id="session-list"></div>
+      </aside>
+
+      <main class="admin-main">
+        <section>
+          <h2>会话详情</h2>
+          <div id="session-detail" class="admin-card">
+            <div class="system-message">请选择左侧玩家查看详情</div>
+          </div>
+        </section>
+        <section>
+          <h2>操作</h2>
+          <div class="admin-actions">
+            <button id="clear-session" disabled>清空会话</button>
+            <select id="punish-level">
+              <option value="轻度亵渎">轻度亵渎</option>
+              <option value="重度渎道">重度渎道</option>
+            </select>
+            <input id="punish-reason" placeholder="缘由（可选）" />
+            <button id="punish-btn" disabled>执行惩戒</button>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="admin.js"></script>
+  </body>
+  </html>
+

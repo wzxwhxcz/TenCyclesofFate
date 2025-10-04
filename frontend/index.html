@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>浮生十梦</title>
+    <link rel="stylesheet" href="index.css">
+    <!-- Add Marked.js library for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Add pako for Gzip decompression -->
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+
+    <script type="text/javascript">
+        (function (c, l, a, r, i, t, y) {
+            c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments) };
+            t = l.createElement(r); t.async = 1; t.src = "https://www.clarity.ms/tag/" + i;
+            y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y);
+        })(window, document, "clarity", "script", "t8hrcju0wy");
+    </script>
+</head>
+
+<body>
+    <div id="app-container">
+        <!-- Login View -->
+        <div id="login-view" class="view active">
+            <h1>浮生十梦</h1>
+            <p>此乃试炼之地，请先表明身份。</p>
+            <a href="/api/login/linuxdo" class="login-button">使用 Linux.do 登录</a>
+            <p id="login-error" class="error-message"></p>
+        </div>
+
+        <!-- Game View -->
+        <div id="game-view" class="view">
+            <header id="game-header">
+                <h1>浮生一梦</h1>
+                <div id="game-status">
+                    <span>剩余机缘: <span id="opportunities">10</span></span>
+                    <button id="logout-button" class="logout-button">登出</button>
+                </div>
+            </header>
+
+            <aside id="status-panel">
+                <!-- Character status will be rendered here -->
+                <p>【人物业力】</p>
+                <div id="character-status"></div>
+            </aside>
+
+            <main id="main-content">
+                <div id="narrative-window">
+                    <!-- Game narrative will be appended here -->
+                </div>
+            </main>
+
+            <footer id="action-area">
+                <div class="action-input-row">
+                    <input type="text" id="action-input" placeholder="汝欲何为..." disabled>
+                    <button id="action-button" disabled>定</button>
+                </div>
+                <button id="start-trial-button" class="hidden">开启下一次试炼</button>
+            </footer>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loading-spinner" class="spinner-overlay" style="display: none;">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Roll Animation Overlay -->
+        <div id="roll-overlay" class="hidden">
+            <div id="roll-panel">
+                <div class="dice-cup">🎲</div>
+                <div id="roll-details">
+                    <span id="roll-type"></span>
+                    <span id="roll-target"></span>
+                </div>
+                <div id="roll-result-display" class="hidden">
+                    <span id="roll-outcome"></span>
+                    <span id="roll-value"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="index.js"></script>
+</body>
+
+</html>

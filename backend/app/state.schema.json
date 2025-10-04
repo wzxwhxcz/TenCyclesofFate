@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Player Session State",
+  "description": "Defines the complete structure of a single player's daily session data.",
+  "type": "object",
+  "properties": {
+    "player_id": {
+      "description": "The unique identifier for the player.",
+      "type": "string"
+    },
+    "session_date": {
+      "description": "The date of the current session in ISO format, used for daily resets.",
+      "type": "string",
+      "format": "date"
+    },
+    "opportunities_remaining": {
+      "description": "How many trials the player can start today.",
+      "type": "integer"
+    },
+    "daily_success_achieved": {
+      "description": "Flag indicating if the player has successfully completed the day's challenge.",
+      "type": "boolean"
+    },
+    "is_in_trial": {
+      "description": "Flag indicating if the player is currently in an active trial/life.",
+      "type": "boolean"
+    },
+    "is_processing": {
+      "description": "Flag indicating if the backend is currently processing an action for this player.",
+      "type": "boolean"
+    },
+    "pending_punishment": {
+      "description": "An optional flag for a pending punishment.",
+      "type": ["object", "null"]
+    },
+    "unchecked_rounds_count": {
+      "description": "Counter for rounds since the last cheat check.",
+      "type": "integer"
+    },
+    "current_life": {
+      "description": "An object describing the player's current character and situation in a trial.",
+      "type": ["object", "null"],
+      "properties": {
+        "灵石": {
+          "type": "integer",
+          "default": 1,
+          "description": "The amount of spirit stones the character has."
+        }
+      },
+      "additionalProperties": true
+    },
+    "internal_history": {
+      "description": "The complete interaction history for the AI's context.",
+      "type": "array"
+    },
+    "display_history": {
+      "description": "The narrative history to be displayed to the player.",
+      "type": "array"
+    },
+    "roll_event": {
+        "description": "The result of a dice roll for the current turn, if any. This is transient.",
+        "type": ["object", "null"]
+    },
+    "redemption_code": {
+        "description": "The redemption code if the player finishes the game for the day.",
+        "type": ["string", "null"]
+    }
+  },
+  "required": [
+    "player_id",
+    "session_date",
+    "opportunities_remaining",
+    "daily_success_achieved",
+    "is_in_trial",
+    "is_processing",
+    "internal_history",
+    "display_history"
+  ]
+}

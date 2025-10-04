@@ -1,0 +1,10 @@
+/* 轻量样式，复用 index.css 的基础布局 */
+.admin .admin-layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; }
+.admin .admin-sidebar { border-right: 1px solid #e5e7eb; padding-right: 12px; }
+.admin .admin-actions { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+.admin #session-list { display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 200px); overflow: auto; }
+.admin .session-item { padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; background: #fff; }
+.admin .session-item.active { border-color: #2563eb; background: #eff6ff; }
+.admin .admin-card { padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fff; min-height: 240px; }
+.admin pre { white-space: pre-wrap; word-break: break-word; }
+
