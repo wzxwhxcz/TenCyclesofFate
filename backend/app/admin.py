@@ -4,10 +4,41 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, status
 
 from . import auth, state_manager, security
+from .config import settings
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+
+@router.get("/check-permission")
+async def check_admin_permission(
+    current_user: Annotated[dict, Depends(auth.get_current_active_user)],
+):
+    """
+    检查当前用户是否有管理员权限
+    返回用户信息和权限状态
+    """
+    username = current_user.get("username", "")
+    trust_level = current_user.get("trust_level", 0)
+    
+    # 检查是否在白名单中
+    whitelist = settings.ADMIN_USER_WHITELIST
+    is_whitelisted = username in whitelist if whitelist else False
+    
+    # 检查信任等级
+    has_trust_level = trust_level >= settings.ADMIN_MIN_TRUST_LEVEL
+    
+    # 判断是否是管理员
+    is_admin = is_whitelisted or has_trust_level
+    
+    return {
+        "username": username,
+        "trust_level": trust_level,
+        "is_admin": is_admin,
+        "is_whitelisted": is_whitelisted,
+        "has_trust_level": has_trust_level
+    }
 
 
 @router.get("/sessions")

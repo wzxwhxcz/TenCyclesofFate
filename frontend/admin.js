@@ -698,10 +698,103 @@ window.toggleMobileDetail = function() {
 // ==================== 初始化 ====================
 
 /**
+ * 检查管理员权限
+ */
+async function checkAdminPermission() {
+  try {
+    const response = await fetchJSON('/api/admin/check-permission');
+    return response;
+  } catch (error) {
+    console.error('检查权限失败:', error);
+    return null;
+  }
+}
+
+/**
+ * 显示非管理员界面
+ */
+function showNonAdminView(username) {
+  // 隐藏所有管理功能
+  document.querySelector('.container').innerHTML = `
+    <div class="header">
+      <h1>🎮 浮生十梦 - 用户面板</h1>
+      <p class="subtitle">欢迎回来，${escapeHtml(username)}</p>
+    </div>
+    
+    <div class="main-panel">
+      <div class="empty-state">
+        <h2 style="color: #667eea; margin-bottom: 16px;">👋 您好，${escapeHtml(username)}</h2>
+        <p style="color: #718096; font-size: 16px; line-height: 1.6;">
+          您当前没有管理员权限。<br>
+          如需访问管理功能，请联系系统管理员。
+        </p>
+        <div style="margin-top: 24px;">
+          <a href="/" class="btn btn-primary">返回游戏</a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="detail-panel">
+      <h3>📋 权限说明</h3>
+      <div style="padding: 20px; color: #4a5568; line-height: 1.8;">
+        <p><strong>管理员权限要求：</strong></p>
+        <ul style="margin-left: 20px;">
+          <li>信任等级达到要求</li>
+          <li>或在管理员白名单中</li>
+        </ul>
+        <p style="margin-top: 16px;">
+          如果您认为这是一个错误，请联系管理员核实您的权限设置。
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+/**
  * 初始化应用
  */
 async function init() {
   console.log('🎮 管理员后台初始化中...');
+  
+  // 首先检查权限
+  const permissionInfo = await checkAdminPermission();
+  
+  if (!permissionInfo) {
+    // 无法获取权限信息，可能未登录
+    document.querySelector('.container').innerHTML = `
+      <div class="header">
+        <h1>🎮 浮生十梦 - 管理员后台</h1>
+        <p class="subtitle">请先登录</p>
+      </div>
+      
+      <div class="main-panel">
+        <div class="empty-state">
+          <h2 style="color: #f56565; margin-bottom: 16px;">⚠️ 未登录</h2>
+          <p style="color: #718096; font-size: 16px; margin-bottom: 24px;">
+            请先登录以访问管理后台
+          </p>
+          <a href="/api/login/linuxdo" class="btn btn-primary">前往登录</a>
+        </div>
+      </div>
+    `;
+    return;
+  }
+  
+  // 检查是否有管理员权限
+  if (!permissionInfo.is_admin) {
+    showNonAdminView(permissionInfo.username);
+    console.log(`用户 ${permissionInfo.username} 无管理员权限`);
+    return;
+  }
+  
+  // 有管理员权限，显示完整的管理界面
+  console.log(`✅ 用户 ${permissionInfo.username} 已验证管理员权限`);
+  
+  // 可选：在页面上显示当前管理员信息
+  const subtitle = document.querySelector('.header .subtitle');
+  if (subtitle) {
+    subtitle.textContent = `当前管理员：${permissionInfo.username} | 信任等级：${permissionInfo.trust_level}`;
+  }
   
   // 绑定事件
   bindEvents();

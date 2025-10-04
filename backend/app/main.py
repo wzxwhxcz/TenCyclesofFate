@@ -111,6 +111,14 @@ async def logout():
     response.delete_cookie("token")
     return response
 
+# --- Admin Route ---
+@root_router.get("/admin")
+async def admin_redirect():
+    """
+    Redirects /admin to /admin.html for convenience.
+    """
+    return RedirectResponse(url="/admin.html")
+
 # --- Game Routes ---
 @api_router.get("/live/players")
 async def get_live_players():
