@@ -1,11 +1,19 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    # AI Provider Selection
+    AI_PROVIDER: str = "auto"  # Options: "openai", "anthropic", "auto"
+    
     # OpenAI API Settings
     OPENAI_API_KEY: str | None = None # Allow key to be optional to enable server startup
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
     OPENAI_MODEL: str = "gpt-3.5-turbo"
     OPENAI_MODEL_CHEAT_CHECK: str = "qwen3-235b-a22b"
+    
+    # Anthropic API Settings
+    ANTHROPIC_API_KEY: str | None = None
+    ANTHROPIC_BASE_URL: str | None = None  # Optional, for custom endpoints
+    ANTHROPIC_MODEL: str = "claude-3-opus-20240229"
 
     # JWT Settings for OAuth2
     SECRET_KEY: str

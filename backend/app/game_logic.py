@@ -1,16 +1,14 @@
 import logging
-import math
 import random
 import json
 import asyncio
 import time
-import traceback
 from copy import deepcopy
 from datetime import date
 from pathlib import Path
-from fastapi import HTTPException, status
 
-from . import state_manager, openai_client, cheat_check
+from . import state_manager, cheat_check
+from .ai_service import get_ai_response  # 使用统一的 AI 服务接口
 from .websocket_manager import manager as websocket_manager
 
 # --- Logging ---
@@ -135,7 +133,7 @@ async def _handle_roll_request(
 
     prompt_for_ai_part2 = f"{result_text}\n\n请严格基于此判定结果，继续叙事，并返回包含叙事和状态更新的最终JSON对象。这是当前的游戏状态JSON:\n{json.dumps(last_state, ensure_ascii=False)}"
     history_for_part2 = internal_history  # History is now updated before this call
-    ai_response = await openai_client.get_ai_response(
+    ai_response = await get_ai_response(
         prompt=prompt_for_ai_part2, history=history_for_part2
     )
     return ai_response, roll_event
@@ -152,35 +150,16 @@ def _end_game_without_code(player_id: str, spirit_stones: int) -> tuple[dict, di
 def end_game_and_get_code(
     user_id: int, player_id: str, spirit_stones: int
 ) -> tuple[dict, dict]:
-    if spirit_stones <= 0:
-        return {"error": "未获得灵石，无法生成兑换码。"}, {}
-
-    converted_value = REWARD_SCALING_FACTOR * min(
-        30, max(1, 3 * (spirit_stones ** (1 / 6)))
+    """
+    遗留函数：原本用于生成兑换码，但相关模块已被移除。
+    现在改为调用 _end_game_without_code 函数。
+    
+    保留此函数是为了向后兼容，如果有其他地方调用它。
+    """
+    logger.warning(
+        f"end_game_and_get_code called for {player_id}, redirecting to _end_game_without_code"
     )
-    converted_value = int(converted_value)
-
-    # Use the new database-integrated redemption code generation
-    code_name = f"天道十试-{date.today().isoformat()}-{player_id}"
-    redemption_code = redemption.generate_and_insert_redemption_code(
-        user_id=user_id, quota=converted_value, name=code_name
-    )
-
-    if not redemption_code:
-        final_message = "\n\n【天机有变】\n天道因果汇集之时，竟有外力干预，兑换码生成失败。请联系天道之外的司掌者寻求解决。"
-        return {
-            "error": "数据库错误，无法生成兑换码。",
-            "final_message": final_message,
-        }, {}
-
-    logger.info(
-        f"Generated and stored DB code {redemption_code} for {player_id} with value {converted_value:.2f}."
-    )
-    final_message = f"\n\n【天道回响】\n汝此番试炼功德圆满，获得兑换码: {redemption_code}\n请妥善保管，此乃汝应得之天道馈赠。明日此时，可再度问道。"
-    return {"final_message": final_message, "redemption_code": redemption_code}, {
-        "daily_success_achieved": True,
-        "redemption_code": redemption_code,
-    }
+    return _end_game_without_code(player_id, spirit_stones)
 
 
 def _extract_json_from_response(response_str: str) -> str | None:
@@ -262,7 +241,7 @@ async def _process_player_action_async(user_info: dict, action: str):
 
         await state_manager.save_session(player_id, session)
         # Get AI response
-        ai_json_response_str = await openai_client.get_ai_response(
+        ai_json_response_str = await get_ai_response(
             prompt=prompt_for_ai, history=session["internal_history"]
         )
 
