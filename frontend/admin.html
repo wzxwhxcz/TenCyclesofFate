@@ -470,8 +470,11 @@
         margin-bottom: 16px;
       }
 
-      .detail-panel.mobile-collapsed {
-        display: none;
+      /* 只在移动端应用折叠样式 */
+      @media (max-width: 768px) {
+        .detail-panel.mobile-collapsed {
+          display: none;
+        }
       }
 
       /* 移动端响应式布局 */
@@ -568,6 +571,14 @@
           font-size: 11px;
           max-height: 300px;
           padding: 12px;
+          word-break: break-all;
+          white-space: pre-wrap;
+        }
+        
+        .json-viewer pre {
+          margin: 0;
+          white-space: pre-wrap;
+          word-wrap: break-word;
         }
 
         /* 通知位置调整 */
@@ -870,7 +881,7 @@
         📋 查看详情面板
       </button>
 
-      <div class="detail-panel mobile-collapsed" id="detail-panel">
+      <div class="detail-panel" id="detail-panel">
         <h3>📋 会话详情</h3>
         <div class="json-viewer" id="detail">
           <div class="empty-state">

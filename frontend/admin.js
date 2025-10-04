@@ -380,9 +380,21 @@ async function showDetail(idOrEnc) {
     const detail = await fetchJSON(`/api/admin/session/${encodeURIComponent(idOrEnc)}`);
     const detailDiv = document.getElementById('detail');
     
-    // 语法高亮的JSON
+    // 语法高亮的JSON，确保在移动端也能正确显示
     const jsonStr = JSON.stringify(detail, null, 2);
-    detailDiv.innerHTML = `<pre style="margin: 0;">${escapeHtml(jsonStr)}</pre>`;
+    detailDiv.innerHTML = `<pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(jsonStr)}</pre>`;
+    
+    // 在移动端自动展开详情面板
+    if (window.innerWidth <= 768) {
+      const panel = document.getElementById('detail-panel');
+      const button = document.getElementById('mobile-detail-toggle');
+      if (panel && panel.classList.contains('mobile-collapsed')) {
+        panel.classList.remove('mobile-collapsed');
+        if (button) {
+          button.textContent = '📋 隐藏详情面板';
+        }
+      }
+    }
     
     // 滚动到详情面板
     detailDiv.parentElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -685,15 +697,42 @@ window.toggleMobileDetail = function() {
   const panel = document.getElementById('detail-panel');
   const button = document.getElementById('mobile-detail-toggle');
   
-  if (panel.classList.contains('mobile-collapsed')) {
-    panel.classList.remove('mobile-collapsed');
-    button.textContent = '📋 隐藏详情面板';
-    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  } else {
-    panel.classList.add('mobile-collapsed');
-    button.textContent = '📋 查看详情面板';
+  // 只在移动端切换折叠状态
+  if (window.innerWidth <= 768) {
+    if (panel.classList.contains('mobile-collapsed')) {
+      panel.classList.remove('mobile-collapsed');
+      button.textContent = '📋 隐藏详情面板';
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      panel.classList.add('mobile-collapsed');
+      button.textContent = '📋 查看详情面板';
+    }
   }
 }
+
+/**
+ * 初始化详情面板状态
+ */
+function initDetailPanel() {
+  const panel = document.getElementById('detail-panel');
+  const button = document.getElementById('mobile-detail-toggle');
+  
+  // 在移动端默认折叠详情面板
+  if (window.innerWidth <= 768) {
+    panel.classList.add('mobile-collapsed');
+    if (button) {
+      button.textContent = '📋 查看详情面板';
+    }
+  } else {
+    // 桌面端确保详情面板可见
+    panel.classList.remove('mobile-collapsed');
+  }
+}
+
+// 监听窗口大小变化
+window.addEventListener('resize', () => {
+  initDetailPanel();
+});
 
 // ==================== 初始化 ====================
 
@@ -798,6 +837,9 @@ async function init() {
   
   // 绑定事件
   bindEvents();
+  
+  // 初始化详情面板状态
+  initDetailPanel();
   
   // 加载数据
   try {
