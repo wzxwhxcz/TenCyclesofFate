@@ -16,3 +16,4 @@ sqlalchemy
 aiosqlite
 mysql-connector-python
 psycopg2-binary
+aiohttp  # 用于测试WebSocket连接

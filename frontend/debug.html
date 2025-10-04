@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>认证调试页面</title>
+    <style>
+        body {
+            font-family: monospace;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .section {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 3px;
+            background: #007bff;
+            color: white;
+        }
+        button:hover { background: #0056b3; }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+        #log {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 10px;
+            font-size: 12px;
+            border-radius: 3px;
+        }
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px;
+        }
+        .log-error { color: #f48771; }
+        .log-success { color: #89d185; }
+        .log-info { color: #75beff; }
+        .log-warning { color: #e9c46a; }
+    </style>
+</head>
+<body>
+    <h1>🔍 认证与WebSocket调试工具</h1>
+    
+    <div class="section">
+        <h2>1. Cookie状态</h2>
+        <div id="cookie-status"></div>
+        <button onclick="checkCookies()">检查Cookie</button>
+        <button onclick="clearCookies()">清除所有Cookie</button>
+    </div>
+    
+    <div class="section">
+        <h2>2. 认证测试</h2>
+        <div id="auth-status"></div>
+        <button onclick="testAuth()">测试认证状态</button>
+        <button onclick="initGame()">初始化游戏</button>
+        <button onclick="window.location.href='/api/login/linuxdo'">LinuxDo登录</button>
+    </div>
+    
+    <div class="section">
+        <h2>3. WebSocket测试</h2>
+        <div id="ws-status"></div>
+        <button onclick="testWebSocket()">测试WebSocket连接</button>
+        <button onclick="closeWebSocket()">关闭WebSocket</button>
+    </div>
+    
+    <div class="section">
+        <h2>4. 实时日志</h2>
+        <div id="log"></div>
+        <button onclick="clearLog()">清除日志</button>
+    </div>
+    
+    <div class="section">
+        <h2>5. 系统信息</h2>
+        <pre id="system-info"></pre>
+    </div>
+
+    <script>
+        let ws = null;
+        const logDiv = document.getElementById('log');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${type}]`, message);
+        }
+        
+        function clearLog() {
+            logDiv.innerHTML = '';
+            log('日志已清除', 'info');
+        }
+        
+        function updateStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        async function checkCookies() {
+            log('检查Cookie...', 'info');
+            const cookies = document.cookie.split(';').map(c => c.trim());
+            const tokenCookie = cookies.find(c => c.startsWith('token='));
+            
+            if (tokenCookie) {
+                const tokenValue = tokenCookie.split('=')[1];
+                const tokenPreview = tokenValue.substring(0, 20) + '...';
+                updateStatus('cookie-status', 
+                    `✅ 找到token cookie<br>预览: ${tokenPreview}<br>完整Cookie列表:<br>${cookies.join('<br>')}`, 
+                    'success');
+                log('找到token cookie', 'success');
+            } else {
+                updateStatus('cookie-status', 
+                    `❌ 未找到token cookie<br>当前Cookie:<br>${cookies.length > 0 ? cookies.join('<br>') : '无'}`, 
+                    'error');
+                log('未找到token cookie', 'error');
+            }
+        }
+        
+        function clearCookies() {
+            log('清除所有Cookie...', 'warning');
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            updateStatus('cookie-status', '已清除所有Cookie', 'warning');
+            log('Cookie已清除', 'success');
+        }
+        
+        async function testAuth() {
+            log('测试认证状态...', 'info');
+            try {
+                const response = await fetch('/api/test/auth', {
+                    credentials: 'same-origin'
+                });
+                const data = await response.json();
+                
+                if (data.authenticated) {
+                    updateStatus('auth-status', 
+                        `✅ 认证成功<br>用户名: ${data.username}<br>信任等级: ${data.trust_level}`, 
+                        'success');
+                    log(`认证成功 - 用户: ${data.username}`, 'success');
+                } else {
+                    updateStatus('auth-status', 
+                        `❌ 认证失败<br>原因: ${data.message}`, 
+                        'error');
+                    log(`认证失败: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                updateStatus('auth-status', `❌ 请求失败: ${error.message}`, 'error');
+                log(`认证测试失败: ${error.message}`, 'error');
+            }
+        }
+        
+        async function initGame() {
+            log('初始化游戏...', 'info');
+            try {
+                const response = await fetch('/api/game/init', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                log(`游戏初始化响应状态: ${response.status}`, response.ok ? 'success' : 'error');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStatus('auth-status', 
+                        `✅ 游戏初始化成功<br>剩余机会: ${data.opportunities_remaining}`, 
+                        'success');
+                    log('游戏初始化成功', 'success');
+                } else {
+                    const errorText = await response.text();
+                    updateStatus('auth-status', 
+                        `❌ 游戏初始化失败<br>状态码: ${response.status}<br>错误: ${errorText}`, 
+                        'error');
+                    log(`游戏初始化失败: ${response.status} - ${errorText}`, 'error');
+                }
+            } catch (error) {
+                updateStatus('auth-status', `❌ 请求失败: ${error.message}`, 'error');
+                log(`游戏初始化异常: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testWebSocket() {
+            log('测试WebSocket连接...', 'info');
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                updateStatus('ws-status', '⚠️ WebSocket已连接', 'warning');
+                log('WebSocket已经连接', 'warning');
+                return;
+            }
+            
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/api/ws`;
+            
+            log(`连接到: ${wsUrl}`, 'info');
+            
+            try {
+                ws = new WebSocket(wsUrl);
+                ws.binaryType = 'arraybuffer';
+                
+                ws.onopen = () => {
+                    updateStatus('ws-status', '✅ WebSocket连接成功', 'success');
+                    log('WebSocket连接成功！', 'success');
+                };
+                
+                ws.onmessage = (event) => {
+                    let message;
+                    if (event.data instanceof ArrayBuffer) {
+                        try {
+                            // 需要pako库来解压
+                            log('收到二进制消息（需要解压）', 'info');
+                            updateStatus('ws-status', '收到压缩消息', 'info');
+                        } catch (err) {
+                            log(`解压失败: ${err.message}`, 'error');
+                        }
+                    } else {
+                        message = JSON.parse(event.data);
+                        log(`收到消息: ${JSON.stringify(message)}`, 'info');
+                        updateStatus('ws-status', `收到消息类型: ${message.type}`, 'info');
+                    }
+                };
+                
+                ws.onerror = (error) => {
+                    updateStatus('ws-status', '❌ WebSocket连接错误', 'error');
+                    log('WebSocket错误', 'error');
+                };
+                
+                ws.onclose = (event) => {
+                    updateStatus('ws-status', 
+                        `❌ WebSocket关闭<br>代码: ${event.code}<br>原因: ${event.reason || '未知'}`, 
+                        'error');
+                    log(`WebSocket关闭 - 代码: ${event.code}, 原因: ${event.reason}`, 'error');
+                };
+                
+            } catch (error) {
+                updateStatus('ws-status', `❌ 连接失败: ${error.message}`, 'error');
+                log(`WebSocket连接异常: ${error.message}`, 'error');
+            }
+        }
+        
+        function closeWebSocket() {
+            if (ws) {
+                ws.close();
+                ws = null;
+                updateStatus('ws-status', 'WebSocket已关闭', 'warning');
+                log('WebSocket连接已关闭', 'warning');
+            } else {
+                updateStatus('ws-status', '无活动的WebSocket连接', 'info');
+                log('没有活动的WebSocket连接', 'info');
+            }
+        }
+        
+        function showSystemInfo() {
+            const info = {
+                '浏览器': navigator.userAgent,
+                '协议': window.location.protocol,
+                '主机': window.location.host,
+                'Cookie启用': navigator.cookieEnabled,
+                '当前路径': window.location.pathname,
+                '时间': new Date().toLocaleString()
+            };
+            
+            document.getElementById('system-info').textContent = JSON.stringify(info, null, 2);
+        }
+        
+        // 页面加载时自动执行
+        window.onload = () => {
+            log('调试工具已加载', 'success');
+            showSystemInfo();
+            checkCookies();
+            testAuth();
+        };
+    </script>
+</body>
+</html>

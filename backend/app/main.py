@@ -8,7 +8,7 @@ from pathlib import Path
 
 from fastapi import (
     FastAPI, APIRouter, Depends, HTTPException, status,
-    WebSocket, WebSocketDisconnect, Request
+    WebSocket, WebSocketDisconnect, Request, Cookie
 )
 from fastapi.responses import RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -127,6 +127,27 @@ async def logout():
     response = RedirectResponse(url="/")
     response.delete_cookie("token")
     return response
+
+# --- Test Route ---
+@api_router.get("/test/auth")
+async def test_auth(
+    request: Request,
+    token: str | None = Cookie(default=None)
+):
+    """Test endpoint to verify authentication status"""
+    if not token:
+        return {"authenticated": False, "message": "No token cookie found"}
+    
+    try:
+        payload = auth.decode_access_token(token)
+        return {
+            "authenticated": True,
+            "username": payload.get("sub"),
+            "trust_level": payload.get("trust_level"),
+            "message": "Authentication successful"
+        }
+    except Exception as e:
+        return {"authenticated": False, "message": f"Token validation failed: {str(e)}"}
 
 # --- Admin Route ---
 @root_router.get("/admin")

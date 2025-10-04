@@ -4,16 +4,17 @@ const API_BASE_URL = "/api";
 // --- State Management ---
 const appState = {
     gameState: null,
-    streamBuffer: '',  // 鐢ㄤ簬瀛樺偍娴佸紡杈撳嚭鐨勭紦鍐插尯
-    isStreaming: false,  // 鏍囪鏄惁姝ｅ湪鎺ユ敹娴佸紡杈撳嚭
+    streamBuffer: '',  // 用于存储流式输出的缓冲区
+    isStreaming: false,  // 标记是否正在接收流式输出
 };
+
 // 过滤函数：在流式显示中永远不展示任何代码块/JSON
 function sanitizeStreamText(text) {
     if (!text) return '';
-    // 移除所有围栏代码块 `...`（包含 `json）
-    let s = text.replace(/`[\s\S]*?`/g, '');
-    // 若出现未闭合的围栏，从起始 ` 到结尾全部移除
-    s = s.replace(/`[\s\S]*$/g, '');
+    // 移除所有围栏代码块 ```...```（包含 ```json）
+    let s = text.replace(/```[\s\S]*?```/g, '');
+    // 若出现未闭合的围栏，从起始 ``` 到结尾全部移除
+    s = s.replace(/```[\s\S]*$/g, '');
     return s;
 }
 
@@ -51,10 +52,15 @@ const DOMElements = {
 // --- API Client ---
 const api = {
     async initGame() {
+        console.log('Initializing game...');
         const response = await fetch(`${API_BASE_URL}/game/init`, {
             method: 'POST',
-            // No Authorization header needed, relies on HttpOnly cookie
+            credentials: 'same-origin',  // 确保包含cookie
+            headers: {
+                'Content-Type': 'application/json',
+            }
         });
+        console.log('Init game response status:', response.status);
         if (response.status === 401) {
             throw new Error('Unauthorized');
         }
@@ -62,7 +68,10 @@ const api = {
         return response.json();
     },
     async logout() {
-        await fetch(`${API_BASE_URL}/logout`, { method: 'POST' });
+        await fetch(`${API_BASE_URL}/logout`, { 
+            method: 'POST',
+            credentials: 'same-origin' 
+        });
         window.location.href = '/';
     }
 };
@@ -77,7 +86,7 @@ const socketManager = {
         if (!indicator) {
             indicator = document.createElement('div');
             indicator.id = 'streaming-indicator';
-            indicator.textContent = 'AI 姝ｅ湪鐢熸垚鈥?;
+            indicator.textContent = 'AI 正在生成...';
             indicator.style.opacity = '0.7';
             indicator.style.fontSize = '0.9em';
             container.appendChild(indicator);
@@ -105,10 +114,15 @@ const socketManager = {
             const host = window.location.host;
             // The token is no longer in the URL; it's read from the cookie by the server.
             const wsUrl = `${protocol}//${host}${API_BASE_URL}/ws`;
+            console.log('Connecting to WebSocket:', wsUrl);
             this.socket = new WebSocket(wsUrl);
             this.socket.binaryType = 'arraybuffer'; // Important for receiving binary data
 
-            this.socket.onopen = () => { console.log("WebSocket established."); resolve(); };
+            this.socket.onopen = () => { 
+                console.log("WebSocket established."); 
+                resolve(); 
+            };
+            
             this.socket.onmessage = (event) => {
                 let message;
                 // Check if the data is binary (ArrayBuffer)
@@ -135,13 +149,16 @@ const socketManager = {
                         renderRollEvent(message.data);
                         break;
                     case 'stream_start':
-                        // 寮€濮嬫祦寮忚緭鍑?                        appState.isStreaming = true;
+                        // 开始流式输出
+                        appState.isStreaming = true;
                         appState.streamBuffer = '';
-                        // 涓嶅啀鏄剧ず璋冭瘯鎸囩ず鍣?                        break;
+                        // 不再显示调试指示器
+                        break;
                     case 'stream_chunk':
-                        // 鎺ユ敹娴佸紡鏁版嵁鍧?                        if (appState.isStreaming && message.data && message.data.content) {
+                        // 接收流式数据块
+                        if (appState.isStreaming && message.data && message.data.content) {
                             appState.streamBuffer += message.data.content;
-                            // 涓嶅啀鏄剧ず娴佸紡鍐呭
+                            // 不再显示流式内容
                         }
                         break;
                     case 'stream_end':
@@ -153,8 +170,10 @@ const socketManager = {
                         break;
                 }
 
-                // 澧炲己鐨勬祦寮廢I娓叉煋锛堜笌鐜版湁鐘舵€佸鐞嗚В鑰︼紝閬垮厤闃诲锛?                if (message.type === 'stream_start') {
-                    // 闅愯棌鍏ㄥ眬鍔犺浇锛屽垱寤烘祦寮忓鍣?                    showLoading(false);
+                // 增强的流式UI渲染（与现有状态处理解耦，避免阻塞）
+                if (message.type === 'stream_start') {
+                    // 隐藏全局加载，创建流式容器
+                    showLoading(false);
                     socketManager._ensureStreamingElements();
                 } else if (message.type === 'stream_chunk') {
                     if (appState.isStreaming && message.data && message.data.content) {
@@ -164,18 +183,28 @@ const socketManager = {
                         DOMElements.narrativeWindow.scrollTop = DOMElements.narrativeWindow.scrollHeight;
                     }
                 } else if (message.type === 'stream_end') {
-                    // 淇濈暀宸叉樉绀哄唴瀹癸紝寰?full_state 鍒版潵鍚庣敱 render() 缁熶竴娓呯悊
+                    // 保留已显示内容，待 full_state 到来后由 render() 统一清理
                 }
             };
-            this.socket.onclose = () => { console.log("Reconnecting..."); showLoading(true); setTimeout(() => this.connect(), 5000); };
-            this.socket.onerror = (error) => { console.error("WebSocket error:", error); DOMElements.loginError.textContent = '鏃犳硶杩炴帴銆?; reject(error); };
+            
+            this.socket.onclose = () => { 
+                console.log("WebSocket closed. Reconnecting..."); 
+                showLoading(true); 
+                setTimeout(() => this.connect(), 5000); 
+            };
+            
+            this.socket.onerror = (error) => { 
+                console.error("WebSocket error:", error); 
+                DOMElements.loginError.textContent = '无法连接。'; 
+                reject(error); 
+            };
         });
     },
     sendAction(action) {
         if (this.socket && this.socket.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify({ action }));
         } else {
-            alert("杩炴帴宸叉柇寮€锛岃鍒锋柊銆?);
+            alert("连接已断开，请刷新。");
         }
     }
 };
@@ -187,7 +216,7 @@ function showView(viewId) {
 }
 
 function showLoading(isLoading) {
-    // 濡傛灉姝ｅ湪娴佸紡杈撳嚭锛屼笉鏄剧ず鍔犺浇鍔ㄧ敾
+    // 如果正在流式输出，不显示加载动画
     if (appState.isStreaming) {
         DOMElements.loadingSpinner.style.display = 'none';
     } else {
@@ -212,12 +241,13 @@ function render() {
         const p = document.createElement('div');
         p.innerHTML = marked.parse(text);
         if (text.startsWith('> ')) p.classList.add('user-input-message');
-        else if (text.startsWith('銆?)) p.classList.add('system-message');
+        else if (text.startsWith('【')) p.classList.add('system-message');
         historyContainer.appendChild(p);
     });
     DOMElements.narrativeWindow.innerHTML = '';
     DOMElements.narrativeWindow.appendChild(historyContainer);
-    // 濡傛灉浠嶅湪娴佸紡杩囩▼涓紝缁х画鍦ㄥ熬閮ㄦ樉绀哄凡鎺ユ敹鐗囨锛涘惁鍒欐竻鐞嗘畫鐣?    if (appState.isStreaming && appState.streamBuffer) {
+    // 如果仍在流式过程中，继续在尾部显示已接收片段；否则清理残留
+    if (appState.isStreaming && appState.streamBuffer) {
         const els = socketManager._ensureStreamingElements();
         const sanitized = filterStreamForDisplay(appState.streamBuffer);
         els.display.innerHTML = marked.parse(sanitized);
@@ -233,16 +263,16 @@ function render() {
     startButton.classList.toggle('hidden', is_in_trial || daily_success_achieved || opportunities_remaining < 0);
 
     if (daily_success_achieved) {
-         startButton.textContent = "浠婃棩鍔熷痉鍦嗘弧";
+         startButton.textContent = "今日功德圆满";
          startButton.disabled = true;
     } else if (opportunities_remaining <= 0) {
-        startButton.textContent = "鏈虹紭宸插敖";
+        startButton.textContent = "机缘已尽";
         startButton.disabled = true;
     } else {
         if (opportunities_remaining === 10) {
-            startButton.textContent = "寮€濮嬬涓€娆¤瘯鐐?;
+            startButton.textContent = "开始第一次试炼";
         } else {
-            startButton.textContent = "寮€鍚笅涓€娆¤瘯鐐?;
+            startButton.textContent = "开启下一次试炼";
         }
         startButton.disabled = appState.gameState.is_processing;
     }
@@ -282,7 +312,7 @@ function renderCharacterStatus() {
     container.innerHTML = ''; // Clear previous content
 
     if (!current_life) {
-        container.textContent = '闈欏緟澶╁懡...';
+        container.textContent = '静待天命...';
         return;
     }
 
@@ -303,7 +333,7 @@ function renderCharacterStatus() {
 }
 
 function renderRollEvent(rollEvent) {
-    DOMElements.rollType.textContent = `鍒ゅ畾: ${rollEvent.type}`;
+    DOMElements.rollType.textContent = `判定: ${rollEvent.type}`;
     DOMElements.rollTarget.textContent = `(<= ${rollEvent.target})`;
     DOMElements.rollOutcome.textContent = rollEvent.outcome;
     DOMElements.rollOutcome.className = `outcome-${rollEvent.outcome}`;
@@ -314,7 +344,7 @@ function renderRollEvent(rollEvent) {
     setTimeout(() => DOMElements.rollOverlay.classList.add('hidden'), 3000);
 }
 
-// 绉婚櫎璋冭瘯鐢ㄧ殑娴佸紡UI鍑芥暟锛岃繖浜涗笉搴旇鍦ㄧ敓浜х幆澧冧腑鏄剧ず
+// 移除调试用的流式UI函数，这些不应该在生产环境中显示
 
 // --- Event Handlers ---
 function handleLogout() {
@@ -326,7 +356,7 @@ function handleAction(actionOverride = null) {
     if (!action) return;
 
     // Special case for starting a trial to prevent getting locked out by is_processing flag
-    if (action === "寮€濮嬭瘯鐐?) {
+    if (action === "开始试炼") {
         // Allow starting a new trial even if the previous async task is in its finally block
     } else {
         // For all other actions, prevent sending if another action is in flight.
@@ -339,6 +369,7 @@ function handleAction(actionOverride = null) {
 
 // --- Initialization ---
 async function initializeGame() {
+    console.log('Starting game initialization...');
     showLoading(true);
     try {
         const initialState = await api.initGame();
@@ -350,6 +381,7 @@ async function initializeGame() {
     } catch (error) {
         // If init fails (e.g. no valid cookie), just show the login view.
         // The api.initGame function no longer redirects, it just throws an error.
+        console.error('Initialization error:', error);
         showView('login-view');
         if (error.message !== 'Unauthorized') {
              console.error(`Session initialization failed: ${error.message}`);
@@ -359,7 +391,8 @@ async function initializeGame() {
         showLoading(false);
     }
     
-    // 娓呯悊浠讳綍鍙兘娈嬬暀鐨勮皟璇曟樉绀哄厓绱?    const indicator = document.getElementById('streaming-indicator');
+    // 清理任何可能残留的调试显示元素
+    const indicator = document.getElementById('streaming-indicator');
     if (indicator) {
         indicator.remove();
     }
@@ -370,6 +403,7 @@ async function initializeGame() {
 }
 
 function init() {
+    console.log('App initializing...');
     // Always try to initialize the game on page load.
     // If the user is logged in, it will show the game view.
     // If not, the catch block in initializeGame will handle showing the login view.
@@ -379,13 +413,8 @@ function init() {
     DOMElements.logoutButton.addEventListener('click', handleLogout);
     DOMElements.actionButton.addEventListener('click', () => handleAction());
     DOMElements.actionInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAction(); });
-    DOMElements.startTrialButton.addEventListener('click', () => handleAction("寮€濮嬭瘯鐐?));
+    DOMElements.startTrialButton.addEventListener('click', () => handleAction("开始试炼"));
 }
 
 // --- Start the App ---
 init();
-
-
-
-
-
