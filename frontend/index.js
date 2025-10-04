@@ -7,8 +7,26 @@ const appState = {
     streamBuffer: '',  // 鐢ㄤ簬瀛樺偍娴佸紡杈撳嚭鐨勭紦鍐插尯
     isStreaming: false,  // 鏍囪鏄惁姝ｅ湪鎺ユ敹娴佸紡杈撳嚭
 };
+// 过滤函数：在流式显示中永远不展示任何代码块/JSON
+function sanitizeStreamText(text) {
+    if (!text) return '';
+    // 移除所有围栏代码块 `...`（包含 `json）
+    let s = text.replace(/`[\s\S]*?`/g, '');
+    // 若出现未闭合的围栏，从起始 ` 到结尾全部移除
+    s = s.replace(/`[\s\S]*$/g, '');
+    return s;
+}
 
 // --- DOM Elements ---
+function filterStreamForDisplay(text) {
+    if (!text) return '';
+    // Remove fenced code blocks like ```...``` including ```json
+    let s = text.replace(new RegExp('```[\\s\\S]*?```','g'), '');
+    // If fence starts but not closed yet, drop tail from first ```
+    s = s.replace(new RegExp('```[\\s\\S]*$','g'), '');
+    return s;
+}
+
 const DOMElements = {
     loginView: document.getElementById('login-view'),
     gameView: document.getElementById('game-view'),
@@ -141,7 +159,8 @@ const socketManager = {
                 } else if (message.type === 'stream_chunk') {
                     if (appState.isStreaming && message.data && message.data.content) {
                         const els = socketManager._ensureStreamingElements();
-                        els.display.innerHTML = marked.parse(appState.streamBuffer);
+                        const sanitized = filterStreamForDisplay(appState.streamBuffer);
+                        els.display.innerHTML = marked.parse(sanitized);
                         DOMElements.narrativeWindow.scrollTop = DOMElements.narrativeWindow.scrollHeight;
                     }
                 } else if (message.type === 'stream_end') {
@@ -200,7 +219,8 @@ function render() {
     DOMElements.narrativeWindow.appendChild(historyContainer);
     // 濡傛灉浠嶅湪娴佸紡杩囩▼涓紝缁х画鍦ㄥ熬閮ㄦ樉绀哄凡鎺ユ敹鐗囨锛涘惁鍒欐竻鐞嗘畫鐣?    if (appState.isStreaming && appState.streamBuffer) {
         const els = socketManager._ensureStreamingElements();
-        els.display.innerHTML = marked.parse(appState.streamBuffer);
+        const sanitized = filterStreamForDisplay(appState.streamBuffer);
+        els.display.innerHTML = marked.parse(sanitized);
     } else {
         socketManager._removeStreamingElements();
         appState.streamBuffer = '';
@@ -364,6 +384,8 @@ function init() {
 
 // --- Start the App ---
 init();
+
+
 
 
 

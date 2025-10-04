@@ -93,13 +93,30 @@ async def auth_linuxdo_callback(request: Request):
 
     # Set token in cookie and redirect to frontend
     response = RedirectResponse(url="/")
-    response.set_cookie(
-        "token",
-        value=access_token,
-        httponly=True,
-        max_age=int(access_token_expires.total_seconds()),
-        samesite="lax",
-    )
+    
+    # Check if we're in a secure context (HTTPS)
+    is_secure = request.url.scheme == "https"
+    
+    # Set cookie with appropriate settings for WebSocket compatibility
+    if is_secure:
+        # For HTTPS: use secure=True and samesite="none" for cross-origin WebSocket
+        response.set_cookie(
+            "token",
+            value=access_token,
+            httponly=True,
+            max_age=int(access_token_expires.total_seconds()),
+            samesite="none",
+            secure=True,
+        )
+    else:
+        # For HTTP (local dev): don't set samesite to allow WebSocket connections
+        response.set_cookie(
+            "token",
+            value=access_token,
+            httponly=True,
+            max_age=int(access_token_expires.total_seconds()),
+            # Don't set samesite for local development
+        )
     return response
 
 @api_router.post("/logout")
@@ -142,15 +159,19 @@ async def websocket_endpoint(websocket: WebSocket):
     """Handles WebSocket connections for real-time game state updates."""
     token = websocket.cookies.get("token")
     if not token:
+        logger.warning("WebSocket connection attempted without token")
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Missing token")
         return
     try:
         payload = auth.decode_access_token(token)
         username: str | None = payload.get("sub")
         if username is None:
+            logger.warning("WebSocket token has no username in payload")
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid token payload")
             return
-    except HTTPException:
+        logger.info(f"WebSocket authentication successful for user: {username}")
+    except Exception as e:
+        logger.error(f"WebSocket token validation failed: {e}")
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Token validation failed")
         return
 
@@ -178,12 +199,15 @@ async def live_websocket_endpoint(websocket: WebSocket):
     """Handles WebSocket connections for the live viewing system."""
     token = websocket.cookies.get("token")
     if not token:
+        logger.warning("Live WebSocket connection attempted without token")
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Missing token")
         return
     try:
         user_info = await auth.get_current_user(token)
         viewer_id = user_info["username"]
-    except HTTPException:
+        logger.info(f"Live WebSocket authentication successful for viewer: {viewer_id}")
+    except Exception as e:
+        logger.error(f"Live WebSocket token validation failed: {e}")
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Token validation failed")
         return
 
