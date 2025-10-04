@@ -95,22 +95,18 @@ const socketManager = {
                         // 开始流式输出
                         appState.isStreaming = true;
                         appState.streamBuffer = '';
-                        // 显示流式输出提示
-                        if (message.data && message.data.message) {
-                            showStreamingIndicator(message.data.message);
-                        }
+                        // 不再显示调试指示器
                         break;
                     case 'stream_chunk':
                         // 接收流式数据块
                         if (appState.isStreaming && message.data && message.data.content) {
                             appState.streamBuffer += message.data.content;
-                            updateStreamingContent(appState.streamBuffer);
+                            // 不再显示流式内容
                         }
                         break;
                     case 'stream_end':
                         // 结束流式输出
                         appState.isStreaming = false;
-                        hideStreamingIndicator();
                         // 清空缓冲区
                         appState.streamBuffer = '';
                         break;
@@ -258,95 +254,7 @@ function renderRollEvent(rollEvent) {
     setTimeout(() => DOMElements.rollOverlay.classList.add('hidden'), 3000);
 }
 
-// --- Streaming UI Functions ---
-function showStreamingIndicator(message) {
-    // 创建或更新流式输出指示器
-    let indicator = document.getElementById('streaming-indicator');
-    if (!indicator) {
-        indicator = document.createElement('div');
-        indicator.id = 'streaming-indicator';
-        indicator.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            color: #00ff00;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-family: monospace;
-            z-index: 10000;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        `;
-        document.body.appendChild(indicator);
-    }
-    
-    indicator.innerHTML = `
-        <div class="streaming-spinner" style="
-            width: 20px;
-            height: 20px;
-            border: 2px solid #00ff00;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        "></div>
-        <span>${message || 'AI正在生成响应...'}</span>
-    `;
-    
-    // 添加旋转动画
-    if (!document.getElementById('streaming-animation-style')) {
-        const style = document.createElement('style');
-        style.id = 'streaming-animation-style';
-        style.textContent = `
-            @keyframes spin {
-                to { transform: rotate(360deg); }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-}
-
-function hideStreamingIndicator() {
-    const indicator = document.getElementById('streaming-indicator');
-    if (indicator) {
-        indicator.remove();
-    }
-}
-
-function updateStreamingContent(content) {
-    // 创建临时的流式内容显示区域
-    let streamDisplay = document.getElementById('stream-display');
-    if (!streamDisplay) {
-        streamDisplay = document.createElement('div');
-        streamDisplay.id = 'stream-display';
-        streamDisplay.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            max-height: 200px;
-            overflow-y: auto;
-            background: rgba(0, 0, 0, 0.9);
-            color: #00ff00;
-            padding: 15px;
-            border-radius: 5px;
-            font-family: monospace;
-            font-size: 12px;
-            z-index: 9999;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            border: 1px solid #00ff00;
-        `;
-        document.body.appendChild(streamDisplay);
-    }
-    
-    // 显示流式内容（可以选择只显示JSON部分或全部内容）
-    streamDisplay.textContent = content;
-    
-    // 自动滚动到底部
-    streamDisplay.scrollTop = streamDisplay.scrollHeight;
-}
+// 移除调试用的流式UI函数，这些不应该在生产环境中显示
 
 // --- Event Handlers ---
 function handleLogout() {
@@ -391,8 +299,11 @@ async function initializeGame() {
         showLoading(false);
     }
     
-    // 清理任何残留的流式显示元素
-    hideStreamingIndicator();
+    // 清理任何可能残留的调试显示元素
+    const indicator = document.getElementById('streaming-indicator');
+    if (indicator) {
+        indicator.remove();
+    }
     const streamDisplay = document.getElementById('stream-display');
     if (streamDisplay) {
         streamDisplay.remove();

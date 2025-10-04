@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     UVICORN_RELOAD: bool = True
     
     # Streaming Settings
-    ENABLE_STREAMING: bool = True  # Enable/disable streaming AI responses
+    ENABLE_STREAMING: bool = True  # Enable/disable streaming AI responses (默认启用流式输出)
 
     # Admin Settings
     # Minimum trust level required to access admin APIs

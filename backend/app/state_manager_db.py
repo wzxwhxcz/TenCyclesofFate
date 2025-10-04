@@ -1,6 +1,6 @@
 """
-状态管理器 - 使用SQLite数据库持久化存储
-解决Render部署后数据丢失的问题
+使用数据库持久化的状态管理器
+替代原本的JSON文件存储方式
 """
 import asyncio
 import json
@@ -13,9 +13,6 @@ from .websocket_manager import manager as websocket_manager
 from .live_system import live_manager
 from . import security
 from .config import settings
-
-# 如果需要支持外部数据库（MySQL/PostgreSQL），可以导入 state_manager_external_db
-# from . import state_manager_external_db
 
 # --- Module-level State (内存缓存) ---
 SESSIONS: Dict[str, Dict] = {}
@@ -51,7 +48,7 @@ def init_database():
     
     # 创建索引以加快查询
     cursor.execute('''
-        CREATE INDEX IF NOT EXISTS idx_last_modified
+        CREATE INDEX IF NOT EXISTS idx_last_modified 
         ON game_sessions(last_modified DESC)
     ''')
     
@@ -69,7 +66,7 @@ def load_from_database():
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT player_id, session_data, last_modified
+            SELECT player_id, session_data, last_modified 
             FROM game_sessions
         ''')
         
@@ -210,23 +207,6 @@ async def save_session(player_id: str, session_data: Dict):
     ]
     await asyncio.gather(*tasks)
 
-
-async def get_last_n_inputs(player_id: str, n: int) -> List[str]:
-    """获取最近N个玩家输入"""
-    session = await get_session(player_id)
-    if not session:
-        return []
-    
-    internal_history = session.get("internal_history", [])
-    
-    player_inputs = [
-        item["content"]
-        for item in internal_history
-        if isinstance(item, dict) and item.get("role") == "user"
-    ]
-    
-    return player_inputs[-n:]
-
 async def get_session(player_id: str) -> Optional[Dict]:
     """获取会话数据"""
     # 先从内存获取
@@ -240,8 +220,8 @@ async def get_session(player_id: str) -> Optional[Dict]:
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT session_data, last_modified
-            FROM game_sessions
+            SELECT session_data, last_modified 
+            FROM game_sessions 
             WHERE player_id = ?
         ''', (player_id,))
         
@@ -260,6 +240,22 @@ async def get_session(player_id: str) -> Optional[Dict]:
     
     return None
 
+async def get_last_n_inputs(player_id: str, n: int) -> List[str]:
+    """获取最近N个玩家输入"""
+    session = await get_session(player_id)
+    if not session:
+        return []
+    
+    internal_history = session.get("internal_history", [])
+    
+    player_inputs = [
+        item["content"]
+        for item in internal_history
+        if isinstance(item, dict) and item.get("role") == "user"
+    ]
+    
+    return player_inputs[-n:]
+
 def get_most_recent_sessions(limit: int = 10) -> List[Dict]:
     """获取最近活跃的会话"""
     # 从数据库获取最新数据
@@ -271,9 +267,9 @@ def get_most_recent_sessions(limit: int = 10) -> List[Dict]:
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT player_id, last_modified
-            FROM game_sessions
-            ORDER BY last_modified DESC
+            SELECT player_id, last_modified 
+            FROM game_sessions 
+            ORDER BY last_modified DESC 
             LIMIT ?
         ''', (limit,))
         
