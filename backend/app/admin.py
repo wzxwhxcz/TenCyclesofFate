@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, status
 
-from . import auth, state_manager, security, redemption
+from . import auth, state_manager, security
 
 logger = logging.getLogger(__name__)
 
@@ -69,19 +69,4 @@ async def clear_session(
     return {"ok": True}
 
 
-@router.post("/redemptions")
-async def create_redemption(
-    current_admin: Annotated[dict, Depends(auth.require_admin)],
-    body: dict = Body(...),
-):
-    try:
-        quota = float(body.get("quota"))
-    except (TypeError, ValueError):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid quota")
-    name = (body.get("name") or "admin_generated").strip() or "admin_generated"
-    user_id = int(current_admin.get("id") or 0)
-
-    code = redemption.generate_and_insert_redemption_code(user_id=user_id, quota=quota, name=name)
-    if not code:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create code")
-    return {"code": code}
+"""兑换码功能已下线：相关管理端接口已移除。"""

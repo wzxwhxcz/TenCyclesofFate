@@ -48,19 +48,8 @@ async function clearSession(idOrEnc) {
   await loadSessions();
 }
 
-async function makeCode() {
-  const quota = Number(document.getElementById('quota').value);
-  const name = document.getElementById('name').value;
-  const res = await fetchJSON('/api/admin/redemptions', {
-    method: 'POST',
-    body: JSON.stringify({ quota, name }),
-  });
-  document.getElementById('code').textContent = res.code || '';
-}
-
 function bindEvents() {
   document.getElementById('refresh').addEventListener('click', loadSessions);
-  document.getElementById('mkcode').addEventListener('click', makeCode);
   document.getElementById('sessions').addEventListener('click', (e) => {
     const view = e.target.getAttribute('data-view');
     if (view) return void showDetail(view);
@@ -74,4 +63,3 @@ loadSessions().catch((err) => {
   console.error(err);
   document.getElementById('detail').textContent = `加载失败：${err.message}`;
 });
-

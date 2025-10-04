@@ -10,7 +10,7 @@ from datetime import date
 from pathlib import Path
 from fastapi import HTTPException, status
 
-from . import state_manager, openai_client, cheat_check, redemption
+from . import state_manager, openai_client, cheat_check
 from .websocket_manager import manager as websocket_manager
 
 # --- Logging ---
@@ -48,9 +48,7 @@ async def get_or_create_daily_session(current_user: dict) -> dict:
             session["is_processing"] = False
         await state_manager.save_session(player_id, session)
 
-        if session.get("daily_success_achieved") and not session.get("redemption_code"):
-            session["daily_success_achieved"] = False
-            await state_manager.save_session(player_id, session)
+        # 保留既有状态，不再涉及兑换码相关回退逻辑
 
         return session
 
@@ -92,7 +90,6 @@ async def get_or_create_daily_session(current_user: dict) -> dict:
 """
         ],
         "roll_event": None,
-        "redemption_code": None,
     }
     await state_manager.save_session(player_id, new_session)
     return new_session
@@ -138,11 +135,19 @@ async def _handle_roll_request(
 
     prompt_for_ai_part2 = f"{result_text}\n\n请严格基于此判定结果，继续叙事，并返回包含叙事和状态更新的最终JSON对象。这是当前的游戏状态JSON:\n{json.dumps(last_state, ensure_ascii=False)}"
     history_for_part2 = internal_history  # History is now updated before this call
-    ai_response = await openai_client.get_ai_response(
-        prompt=prompt_for_ai_part2, history=history_for_part2
-    )
-    return ai_response, roll_event
+        ai_response = await openai_client.get_ai_response(
+            prompt=prompt_for_ai_part2, history=history_for_part2
+        )
+        return ai_response, roll_event
 
+
+def _end_game_without_code(player_id: str, spirit_stones: int) -> tuple[dict, dict]:
+    """结束当日流程：不再生成任何兑换码，仅给出收束文案与标记日终。"""
+    if spirit_stones <= 0:
+        final_message = "\n\n【天道回响】\n此番试炼未有灵石入账，然行至此处，亦是修行之路。静候明日再启新梦。"
+    else:
+        final_message = "\n\n【天道回响】\n汝此番试炼功德圆满，所得灵石化作心中道光。明日此时，可再度问道。"
+    return {"final_message": final_message}, {"daily_success_achieved": True}
 
 def end_game_and_get_code(
     user_id: int, player_id: str, spirit_stones: int
@@ -350,8 +355,8 @@ async def _process_player_action_async(user_info: dict, action: str):
             if "正常" == await cheat_check.run_cheat_check(player_id, inputs_to_check):
                 session = await state_manager.get_session(player_id)
                 spirit_stones = trigger.get("spirit_stones", 0)
-                end_game_data, end_day_update = end_game_and_get_code(
-                    user_id, player_id, spirit_stones
+                end_game_data, end_day_update = _end_game_without_code(
+                    player_id, spirit_stones
                 )
                 session = _apply_state_update(session, end_day_update)
                 session["display_history"].append(
