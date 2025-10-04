@@ -69,4 +69,38 @@ async def clear_session(
     return {"ok": True}
 
 
+@router.post("/sessions/{id_or_encrypted}/update-opportunities")
+async def update_opportunities(
+    _: Annotated[dict, Depends(auth.require_admin)],
+    id_or_encrypted: str,
+    opportunities: int = Body(..., ge=0, le=100, description="新的机缘次数"),
+):
+    """更新指定用户的机缘次数"""
+    pid = _resolve_player_id(id_or_encrypted)
+    session = await state_manager.get_session(pid)
+    
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    
+    # 更新机缘次数
+    session["opportunities_remaining"] = opportunities
+    
+    # 如果设置了机缘次数大于0，确保用户可以继续游戏
+    if opportunities > 0 and session.get("daily_success_achieved"):
+        session["daily_success_achieved"] = False
+        logger.info(f"Reset daily_success_achieved for {pid} after updating opportunities to {opportunities}")
+    
+    # 保存更新后的会话
+    await state_manager.save_session(pid, session)
+    
+    logger.info(f"Updated opportunities for {pid} to {opportunities}")
+    
+    return {
+        "ok": True,
+        "player_id": pid,
+        "opportunities_remaining": opportunities,
+        "message": f"成功将用户 {pid} 的机缘次数更新为 {opportunities}"
+    }
+
+
 """兑换码功能已下线：相关管理端接口已移除。"""

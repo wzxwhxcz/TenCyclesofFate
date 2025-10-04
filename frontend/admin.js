@@ -270,6 +270,9 @@ function renderSessions() {
       <button class="btn btn-secondary btn-small" data-view="${session.encrypted_id || session.player_id}">
         👁️ 查看
       </button>
+      <button class="btn btn-primary btn-small" data-opportunities="${session.encrypted_id || session.player_id}">
+        🎲 机缘
+      </button>
       <button class="btn btn-danger btn-small" data-clear="${session.encrypted_id || session.player_id}">
         🗑️ 清空
       </button>
@@ -345,6 +348,47 @@ async function clearSession(idOrEnc) {
 }
 
 /**
+ * 修改机缘次数
+ */
+async function updateOpportunities(idOrEnc) {
+  // 先获取当前会话信息
+  try {
+    const session = await fetchJSON(`/api/admin/session/${encodeURIComponent(idOrEnc)}`);
+    const currentOpportunities = session.opportunities_remaining || 0;
+    
+    // 弹出输入框让管理员输入新的机缘次数
+    const input = prompt(
+      `修改用户机缘次数\n当前机缘次数: ${currentOpportunities}\n请输入新的机缘次数 (0-100):`,
+      currentOpportunities.toString()
+    );
+    
+    if (input === null) {
+      return; // 用户取消了
+    }
+    
+    const newOpportunities = parseInt(input, 10);
+    
+    // 验证输入
+    if (isNaN(newOpportunities) || newOpportunities < 0 || newOpportunities > 100) {
+      showNotification('请输入0到100之间的有效数字', 'error');
+      return;
+    }
+    
+    // 发送更新请求
+    await fetchJSON(`/api/admin/sessions/${encodeURIComponent(idOrEnc)}/update-opportunities`, {
+      method: 'POST',
+      body: JSON.stringify(newOpportunities)
+    });
+    
+    showNotification(`机缘次数已更新为 ${newOpportunities}`, 'success');
+    await loadSessions(); // 重新加载会话列表
+  } catch (error) {
+    console.error('修改机缘次数失败:', error);
+    showNotification(`修改失败: ${error.message}`, 'error');
+  }
+}
+
+/**
  * HTML转义
  */
 function escapeHtml(text) {
@@ -392,6 +436,12 @@ function bindEvents() {
     const clearId = e.target.getAttribute('data-clear');
     if (clearId) {
       clearSession(clearId);
+      return;
+    }
+    
+    const opportunitiesId = e.target.getAttribute('data-opportunities');
+    if (opportunitiesId) {
+      updateOpportunities(opportunitiesId);
       return;
     }
   });

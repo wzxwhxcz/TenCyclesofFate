@@ -12,6 +12,49 @@ logger = logging.getLogger(__name__)
 
 # --- Client Initialization ---
 client: Optional[AsyncAnthropic] = None
+client_validated = False  # 标记客户端是否已验证
+
+async def validate_anthropic_client():
+    """验证 Anthropic 客户端和 API key 的有效性"""
+    global client, client_validated
+    
+    if not client:
+        return False
+    
+    try:
+        # 使用用户配置的模型进行验证
+        model = settings.ANTHROPIC_MODEL if hasattr(settings, 'ANTHROPIC_MODEL') else "claude-3-opus-20240229"
+        
+        # 如果配置了多个模型（逗号分隔），使用第一个
+        if "," in model:
+            model = model.split(",")[0].strip()
+        
+        # 尝试一个简单的 API 调用来验证 key
+        response = await client.messages.create(
+            model=model,
+            messages=[{"role": "user", "content": "Hi"}],
+            max_tokens=1
+        )
+        client_validated = True
+        logger.info(f"Anthropic API key 验证成功，使用模型: {model}")
+        return True
+    except APIError as e:
+        if e.status_code == 401:
+            logger.error(f"Anthropic API key 无效: {e}")
+            client = None  # 清除无效的客户端
+            client_validated = False
+            return False
+        else:
+            # 其他错误可能是临时的，保留客户端
+            logger.warning(f"Anthropic API 验证时出现错误: {e}")
+            client_validated = False
+            return False
+    except Exception as e:
+        logger.error(f"验证 Anthropic 客户端时出现意外错误: {e}")
+        client_validated = False
+        return False
+
+# 初始化客户端
 if settings.ANTHROPIC_API_KEY and settings.ANTHROPIC_API_KEY != "your_anthropic_api_key_here":
     try:
         # 构建客户端参数
@@ -25,9 +68,9 @@ if settings.ANTHROPIC_API_KEY and settings.ANTHROPIC_API_KEY != "your_anthropic_
             logger.info(f"使用自定义 Anthropic 基础 URL: {settings.ANTHROPIC_BASE_URL}")
         
         client = AsyncAnthropic(**client_kwargs)
-        logger.info("Anthropic 客户端初始化成功。")
+        logger.info("Anthropic 客户端对象创建成功，等待验证。")
     except Exception as e:
-        logger.error(f"初始化 Anthropic 客户端失败: {e}")
+        logger.error(f"创建 Anthropic 客户端失败: {e}")
         client = None
 else:
     logger.warning("ANTHROPIC_API_KEY 未设置或为占位符，Anthropic 客户端未初始化。")

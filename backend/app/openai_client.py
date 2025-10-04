@@ -11,15 +11,71 @@ logger = logging.getLogger(__name__)
 
 # --- Client Initialization ---
 client: AsyncOpenAI | None = None
+client_validated = False  # 标记客户端是否已验证
+
+async def validate_openai_client():
+    """验证 OpenAI 客户端和 API key 的有效性"""
+    global client, client_validated
+    
+    if not client:
+        return False
+    
+    try:
+        # 使用用户配置的模型进行验证
+        model = settings.OPENAI_MODEL
+        
+        # 如果配置了多个模型（逗号分隔），使用第一个
+        if "," in model:
+            model = model.split(",")[0].strip()
+        
+        # 尝试一个简单的 API 调用来验证 key
+        # 使用最小的 token 数量来减少成本
+        response = await client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": "Hi"}],
+            max_tokens=1
+        )
+        client_validated = True
+        logger.info(f"OpenAI API key 验证成功，使用模型: {model}")
+        return True
+    except APIError as e:
+        if e.status_code == 401:
+            logger.error(f"OpenAI API key 无效: {e}")
+            client = None  # 清除无效的客户端
+            client_validated = False
+            return False
+        elif e.status_code == 404:
+            logger.error(f"OpenAI 模型 {model} 不存在或无权访问: {e}")
+            # 模型不存在，但 API key 可能是有效的，尝试列出模型
+            try:
+                await client.models.list()
+                logger.warning(f"API key 有效但模型 {model} 不可用")
+                client_validated = False
+                return False
+            except:
+                client = None
+                client_validated = False
+                return False
+        else:
+            # 其他错误可能是临时的，保留客户端
+            logger.warning(f"OpenAI API 验证时出现错误: {e}")
+            client_validated = False
+            return False
+    except Exception as e:
+        logger.error(f"验证 OpenAI 客户端时出现意外错误: {e}")
+        client_validated = False
+        return False
+
+# 初始化客户端
 if settings.OPENAI_API_KEY and settings.OPENAI_API_KEY != "your_openai_api_key_here":
     try:
         client = AsyncOpenAI(
             api_key=settings.OPENAI_API_KEY,
             base_url=settings.OPENAI_BASE_URL,
         )
-        logger.info("OpenAI 客户端初始化成功。")
+        logger.info("OpenAI 客户端对象创建成功，等待验证。")
     except Exception as e:
-        logger.error(f"初始化 OpenAI 客户端失败: {e}")
+        logger.error(f"创建 OpenAI 客户端失败: {e}")
         client = None
 else:
     logger.warning("OPENAI_API_KEY 未设置或为占位符，OpenAI 客户端未初始化。")
