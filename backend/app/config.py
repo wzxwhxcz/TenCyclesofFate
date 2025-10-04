@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     PORT: int = 8000
     UVICORN_RELOAD: bool = True
 
+    # Admin Settings
+    # Minimum trust level required to access admin APIs
+    ADMIN_MIN_TRUST_LEVEL: int = 3
+    # Optional comma-separated whitelist of admin usernames
+    ADMIN_USER_WHITELIST: str | None = None
+
     # Point to the .env file in the 'backend' directory relative to the project root
     model_config = SettingsConfigDict(env_file="backend/.env")
 

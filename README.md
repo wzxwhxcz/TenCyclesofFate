@@ -143,6 +143,23 @@ INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 
 现在，在您的浏览器中打开 `http://localhost:8000` 即可开始游戏。
 
+### 🔐 管理员后台
+
+- 页面入口：`/admin.html`
+- 管理鉴权：满足以下任一条件即可访问受保护 API
+  - 账号在白名单 `ADMIN_USER_WHITELIST` 中（逗号分隔）
+  - `trust_level >= ADMIN_MIN_TRUST_LEVEL`
+- 能力概览：
+  - 查看最近会话、查看会话详情、清空会话
+  - 生成兑换码（写入数据库的 `redemptions` 表）
+
+在 `backend/.env` 设置：
+
+```
+ADMIN_MIN_TRUST_LEVEL=3
+# 可选：ADMIN_USER_WHITELIST="alice,bob"
+```
+
 ## 📁 项目结构
 
 ```

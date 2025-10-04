@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>管理员后台 - 浮生十梦</title>
+    <link rel="stylesheet" href="/index.css" />
+    <style>
+      body { padding: 16px; }
+      .grid { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; }
+      .section { margin: 16px 0; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: #fff; }
+      .muted { color: #666; font-size: 12px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; }
+      .actions button { margin-right: 6px; }
+      pre { max-height: 320px; overflow: auto; background: #f7f7f7; padding: 8px; }
+      .inline { display: inline-flex; gap: 8px; align-items: center; }
+    </style>
+  </head>
+  <body>
+    <h1>管理员后台</h1>
+    <div class="muted">需要具备足够信任等级，或在白名单中。</div>
+
+    <div class="section">
+      <div class="inline">
+        <label>显示条数</label>
+        <input id="limit" type="number" min="1" max="500" value="50" />
+        <button id="refresh">刷新会话列表</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>玩家ID</th>
+            <th>最近修改</th>
+            <th>标记</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="sessions"></tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>兑换码生成</h3>
+      <div class="grid" style="grid-template-columns: 1fr 1fr auto;">
+        <input id="quota" type="number" step="1" min="1" placeholder="额度(整数)" />
+        <input id="name" type="text" placeholder="备注(可选)" />
+        <button id="mkcode">生成兑换码</button>
+      </div>
+      <div class="muted">返回后会显示在下方，仅管理员可见。</div>
+      <pre id="code"></pre>
+    </div>
+
+    <div class="section">
+      <h3>会话详情</h3>
+      <pre id="detail">选择“查看”以显示会话 JSON</pre>
+    </div>
+
+    <script type="module" src="/admin.js"></script>
+  </body>
+  </html>
+

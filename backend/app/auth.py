@@ -93,3 +93,24 @@ async def get_current_active_user(
 ):
     # In a real app, you might check if the user is active
     return current_user
+
+# --- Admin Utilities ---
+async def require_admin(current_user: Annotated[dict, Depends(get_current_user)]):
+    """
+    Ensures the current user has admin privileges.
+    Rule: user is in whitelist OR trust_level >= ADMIN_MIN_TRUST_LEVEL.
+    """
+    # Parse optional whitelist
+    wl_raw = settings.ADMIN_USER_WHITELIST or ""
+    whitelist = {u.strip() for u in wl_raw.split(",") if u.strip()}
+
+    username = current_user.get("username")
+    trust_level = int(current_user.get("trust_level") or 0)
+
+    if username in whitelist or trust_level >= settings.ADMIN_MIN_TRUST_LEVEL:
+        return current_user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Admin privileges required",
+    )

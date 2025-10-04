@@ -16,6 +16,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 
 from . import auth, game_logic, state_manager, security
+from .admin import router as admin_router
 from .websocket_manager import manager as websocket_manager
 from .live_system import live_manager
 from .config import settings
@@ -208,6 +209,7 @@ async def live_websocket_endpoint(websocket: WebSocket):
 # --- Include API Router and Mount Static Files ---
 app.include_router(api_router)
 app.include_router(root_router) # Include the root router before mounting static files
+app.include_router(admin_router)
 static_files_dir = Path(__file__).parent.parent.parent / "frontend"
 app.mount("/", StaticFiles(directory=static_files_dir, html=True), name="static")
 
