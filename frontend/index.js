@@ -52,6 +52,31 @@ const api = {
 // --- WebSocket Manager ---
 const socketManager = {
     socket: null,
+    _ensureStreamingElements() {
+        const container = DOMElements.narrativeWindow;
+        let indicator = document.getElementById('streaming-indicator');
+        let display = document.getElementById('stream-display');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'streaming-indicator';
+            indicator.textContent = 'AI 正在生成…';
+            indicator.style.opacity = '0.7';
+            indicator.style.fontSize = '0.9em';
+            container.appendChild(indicator);
+        }
+        if (!display) {
+            display = document.createElement('div');
+            display.id = 'stream-display';
+            container.appendChild(display);
+        }
+        return { indicator, display };
+    },
+    _removeStreamingElements() {
+        const indicator = document.getElementById('streaming-indicator');
+        const display = document.getElementById('stream-display');
+        if (indicator && indicator.parentElement) indicator.parentElement.removeChild(indicator);
+        if (display && display.parentElement) display.parentElement.removeChild(display);
+    },
     connect() {
         return new Promise((resolve, reject) => {
             if (this.socket && this.socket.readyState === WebSocket.OPEN) {
@@ -114,6 +139,21 @@ const socketManager = {
                         alert(`WebSocket Error: ${message.detail}`);
                         break;
                 }
+
+                // 增强的流式UI渲染（与现有状态处理解耦，避免阻塞）
+                if (message.type === 'stream_start') {
+                    // 隐藏全局加载，创建流式容器
+                    showLoading(false);
+                    socketManager._ensureStreamingElements();
+                } else if (message.type === 'stream_chunk') {
+                    if (appState.isStreaming && message.data && message.data.content) {
+                        const els = socketManager._ensureStreamingElements();
+                        els.display.innerHTML = marked.parse(appState.streamBuffer);
+                        DOMElements.narrativeWindow.scrollTop = DOMElements.narrativeWindow.scrollHeight;
+                    }
+                } else if (message.type === 'stream_end') {
+                    // 保留已显示内容，待 full_state 到来后由 render() 统一清理
+                }
             };
             this.socket.onclose = () => { console.log("Reconnecting..."); showLoading(true); setTimeout(() => this.connect(), 5000); };
             this.socket.onerror = (error) => { console.error("WebSocket error:", error); DOMElements.loginError.textContent = '无法连接。'; reject(error); };
@@ -165,6 +205,14 @@ function render() {
     });
     DOMElements.narrativeWindow.innerHTML = '';
     DOMElements.narrativeWindow.appendChild(historyContainer);
+    // 如果仍在流式过程中，继续在尾部显示已接收片段；否则清理残留
+    if (appState.isStreaming && appState.streamBuffer) {
+        const els = socketManager._ensureStreamingElements();
+        els.display.innerHTML = marked.parse(appState.streamBuffer);
+    } else {
+        socketManager._removeStreamingElements();
+        appState.streamBuffer = '';
+    }
     DOMElements.narrativeWindow.scrollTop = DOMElements.narrativeWindow.scrollHeight;
     
     const { is_in_trial, daily_success_achieved, opportunities_remaining } = appState.gameState;
