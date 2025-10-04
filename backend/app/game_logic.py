@@ -135,10 +135,10 @@ async def _handle_roll_request(
 
     prompt_for_ai_part2 = f"{result_text}\n\n请严格基于此判定结果，继续叙事，并返回包含叙事和状态更新的最终JSON对象。这是当前的游戏状态JSON:\n{json.dumps(last_state, ensure_ascii=False)}"
     history_for_part2 = internal_history  # History is now updated before this call
-        ai_response = await openai_client.get_ai_response(
-            prompt=prompt_for_ai_part2, history=history_for_part2
-        )
-        return ai_response, roll_event
+    ai_response = await openai_client.get_ai_response(
+        prompt=prompt_for_ai_part2, history=history_for_part2
+    )
+    return ai_response, roll_event
 
 
 def _end_game_without_code(player_id: str, spirit_stones: int) -> tuple[dict, dict]:
