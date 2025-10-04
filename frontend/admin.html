@@ -176,6 +176,15 @@
         background: #38a169;
       }
 
+      .btn-warning {
+        background: #ed8936;
+        color: white;
+      }
+
+      .btn-warning:hover {
+        background: #dd6b20;
+      }
+
       .btn-danger {
         background: #f56565;
         color: white;
@@ -882,7 +891,12 @@
       </button>
 
       <div class="detail-panel" id="detail-panel">
-        <h3>📋 会话详情</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="margin: 0;">📋 会话详情</h3>
+          <button id="detail-edit-btn" class="btn btn-primary" style="display: none;" onclick="editCurrentSession()">
+            ✏️ 编辑此会话
+          </button>
+        </div>
         <div class="json-viewer" id="detail">
           <div class="empty-state">
             <p>选择"查看"按钮以显示会话详细信息</p>
@@ -905,12 +919,12 @@
           </div>
           
           <div class="form-group">
-            <label>机缘次数</label>
+            <label>机缘次数 (opportunities_remaining)</label>
             <input type="number" id="edit-opportunities" min="0" max="100">
           </div>
           
           <div class="form-group">
-            <label>今日成功状态</label>
+            <label>今日成功状态 (daily_success_achieved)</label>
             <select id="edit-daily-success">
               <option value="false">未成功</option>
               <option value="true">已成功</option>
@@ -918,23 +932,33 @@
           </div>
           
           <div class="form-group">
-            <label>当前试炼</label>
+            <label>当前试炼 (current_trial)</label>
             <input type="number" id="edit-current-trial" min="1" max="10">
           </div>
           
           <div class="form-group">
-            <label>试炼次数</label>
+            <label>试炼次数 (trial_count)</label>
             <input type="number" id="edit-trial-count" min="0">
           </div>
           
           <div class="form-group">
-            <label>待处理惩罚 (JSON格式，留空表示无惩罚)</label>
+            <label>游戏状态 (game_state)</label>
+            <textarea id="edit-game-state" placeholder='游戏状态JSON，例如: {"health": 100, "energy": 50}'></textarea>
+          </div>
+          
+          <div class="form-group">
+            <label>试炼历史 (trial_history)</label>
+            <textarea id="edit-trial-history" placeholder='试炼历史数组JSON，例如: [{"trial": 1, "result": "success"}]'></textarea>
+          </div>
+          
+          <div class="form-group">
+            <label>待处理惩罚 (pending_punishment)</label>
             <textarea id="edit-punishment" placeholder='例如: {"type": "punishment", "value": 1}'></textarea>
           </div>
           
           <div class="form-group">
-            <label>自定义字段 (JSON格式)</label>
-            <textarea id="edit-custom" placeholder='例如: {"key1": "value1", "key2": 123}'></textarea>
+            <label>完整会话JSON (直接编辑整个会话)</label>
+            <textarea id="edit-full-session" style="min-height: 200px; font-size: 12px;" placeholder='粘贴完整的会话JSON数据，将覆盖所有字段'></textarea>
           </div>
           
           <div class="form-actions">

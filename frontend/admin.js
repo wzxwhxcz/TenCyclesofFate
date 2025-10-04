@@ -372,17 +372,27 @@ function renderError(message) {
   `;
 }
 
+// 存储当前查看的会话ID
+let currentViewingId = null;
+
 /**
  * 显示会话详情
  */
 async function showDetail(idOrEnc) {
   try {
+    currentViewingId = idOrEnc;
     const detail = await fetchJSON(`/api/admin/session/${encodeURIComponent(idOrEnc)}`);
     const detailDiv = document.getElementById('detail');
     
     // 语法高亮的JSON，确保在移动端也能正确显示
     const jsonStr = JSON.stringify(detail, null, 2);
     detailDiv.innerHTML = `<pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(jsonStr)}</pre>`;
+    
+    // 显示编辑按钮
+    const editBtn = document.getElementById('detail-edit-btn');
+    if (editBtn) {
+      editBtn.style.display = 'inline-flex';
+    }
     
     // 在移动端自动展开详情面板
     if (window.innerWidth <= 768) {
@@ -408,6 +418,17 @@ async function showDetail(idOrEnc) {
         <p>❌ 加载失败: ${escapeHtml(error.message)}</p>
       </div>
     `;
+  }
+}
+
+/**
+ * 编辑当前查看的会话
+ */
+window.editCurrentSession = function() {
+  if (currentViewingId) {
+    openEditModal(currentViewingId);
+  } else {
+    showNotification('请先查看一个会话', 'warning');
   }
 }
 
@@ -496,12 +517,26 @@ async function openEditModal(idOrEnc) {
     // 获取会话详情
     const session = await fetchJSON(`/api/admin/session/${encodeURIComponent(idOrEnc)}`);
     
-    // 填充表单
+    // 填充基本字段
     document.getElementById('edit-player-id').value = session.player_id || '';
     document.getElementById('edit-opportunities').value = session.opportunities_remaining || 0;
     document.getElementById('edit-daily-success').value = session.daily_success_achieved ? 'true' : 'false';
     document.getElementById('edit-current-trial').value = session.current_trial || 1;
     document.getElementById('edit-trial-count').value = session.trial_count || 0;
+    
+    // 填充游戏状态
+    if (session.game_state) {
+      document.getElementById('edit-game-state').value = JSON.stringify(session.game_state, null, 2);
+    } else {
+      document.getElementById('edit-game-state').value = '';
+    }
+    
+    // 填充试炼历史
+    if (session.trial_history) {
+      document.getElementById('edit-trial-history').value = JSON.stringify(session.trial_history, null, 2);
+    } else {
+      document.getElementById('edit-trial-history').value = '';
+    }
     
     // 处理惩罚字段
     if (session.pending_punishment) {
@@ -510,8 +545,8 @@ async function openEditModal(idOrEnc) {
       document.getElementById('edit-punishment').value = '';
     }
     
-    // 清空自定义字段
-    document.getElementById('edit-custom').value = '';
+    // 填充完整会话JSON
+    document.getElementById('edit-full-session').value = JSON.stringify(session, null, 2);
     
     // 显示对话框
     document.getElementById('edit-modal').classList.add('active');
@@ -541,48 +576,72 @@ async function saveEdit(e) {
   }
   
   try {
-    const updates = {};
+    let updates = {};
     
-    // 收集基本字段
-    const opportunities = parseInt(document.getElementById('edit-opportunities').value);
-    if (!isNaN(opportunities)) {
-      updates.opportunities_remaining = opportunities;
-    }
-    
-    updates.daily_success_achieved = document.getElementById('edit-daily-success').value === 'true';
-    
-    const currentTrial = parseInt(document.getElementById('edit-current-trial').value);
-    if (!isNaN(currentTrial)) {
-      updates.current_trial = currentTrial;
-    }
-    
-    const trialCount = parseInt(document.getElementById('edit-trial-count').value);
-    if (!isNaN(trialCount)) {
-      updates.trial_count = trialCount;
-    }
-    
-    // 处理惩罚字段
-    const punishmentText = document.getElementById('edit-punishment').value.trim();
-    if (punishmentText) {
+    // 检查是否使用完整会话JSON
+    const fullSessionText = document.getElementById('edit-full-session').value.trim();
+    if (fullSessionText) {
       try {
-        updates.pending_punishment = JSON.parse(punishmentText);
+        updates = JSON.parse(fullSessionText);
+        // 移除不应该被修改的字段
+        delete updates.player_id;
+        delete updates.encrypted_id;
       } catch (e) {
-        showNotification('惩罚字段JSON格式错误', 'error');
+        showNotification('完整会话JSON格式错误', 'error');
         return;
       }
     } else {
-      updates.pending_punishment = null;
-    }
-    
-    // 处理自定义字段
-    const customText = document.getElementById('edit-custom').value.trim();
-    if (customText) {
-      try {
-        const customFields = JSON.parse(customText);
-        Object.assign(updates, customFields);
-      } catch (e) {
-        showNotification('自定义字段JSON格式错误', 'error');
-        return;
+      // 收集各个字段
+      const opportunities = parseInt(document.getElementById('edit-opportunities').value);
+      if (!isNaN(opportunities)) {
+        updates.opportunities_remaining = opportunities;
+      }
+      
+      updates.daily_success_achieved = document.getElementById('edit-daily-success').value === 'true';
+      
+      const currentTrial = parseInt(document.getElementById('edit-current-trial').value);
+      if (!isNaN(currentTrial)) {
+        updates.current_trial = currentTrial;
+      }
+      
+      const trialCount = parseInt(document.getElementById('edit-trial-count').value);
+      if (!isNaN(trialCount)) {
+        updates.trial_count = trialCount;
+      }
+      
+      // 处理游戏状态
+      const gameStateText = document.getElementById('edit-game-state').value.trim();
+      if (gameStateText) {
+        try {
+          updates.game_state = JSON.parse(gameStateText);
+        } catch (e) {
+          showNotification('游戏状态JSON格式错误', 'error');
+          return;
+        }
+      }
+      
+      // 处理试炼历史
+      const trialHistoryText = document.getElementById('edit-trial-history').value.trim();
+      if (trialHistoryText) {
+        try {
+          updates.trial_history = JSON.parse(trialHistoryText);
+        } catch (e) {
+          showNotification('试炼历史JSON格式错误', 'error');
+          return;
+        }
+      }
+      
+      // 处理惩罚字段
+      const punishmentText = document.getElementById('edit-punishment').value.trim();
+      if (punishmentText) {
+        try {
+          updates.pending_punishment = JSON.parse(punishmentText);
+        } catch (e) {
+          showNotification('惩罚字段JSON格式错误', 'error');
+          return;
+        }
+      } else {
+        updates.pending_punishment = null;
       }
     }
     
@@ -594,7 +653,14 @@ async function saveEdit(e) {
     
     showNotification('会话更新成功', 'success');
     closeEditModal();
-    await loadSessions(); // 重新加载列表
+    
+    // 重新加载列表
+    await loadSessions();
+    
+    // 如果正在查看这个会话，刷新详情
+    if (currentViewingId === currentEditingId) {
+      await showDetail(currentEditingId);
+    }
   } catch (error) {
     console.error('保存编辑失败:', error);
     showNotification(`保存失败: ${error.message}`, 'error');
