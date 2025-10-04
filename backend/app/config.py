@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     HOST: str = "127.0.0.1"
     PORT: int = 8000
     UVICORN_RELOAD: bool = True
+    
+    # Streaming Settings
+    ENABLE_STREAMING: bool = True  # Enable/disable streaming AI responses
 
     # Admin Settings
     # Minimum trust level required to access admin APIs

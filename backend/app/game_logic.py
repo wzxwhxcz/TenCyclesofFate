@@ -8,8 +8,9 @@ from datetime import date
 from pathlib import Path
 
 from . import state_manager, cheat_check
-from .ai_service import get_ai_response  # 使用统一的 AI 服务接口
+from .ai_service import get_ai_response, get_ai_response_stream  # 使用统一的 AI 服务接口
 from .websocket_manager import manager as websocket_manager
+from .config import settings
 
 # --- Logging ---
 logger = logging.getLogger(__name__)
@@ -133,9 +134,42 @@ async def _handle_roll_request(
 
     prompt_for_ai_part2 = f"{result_text}\n\n请严格基于此判定结果，继续叙事，并返回包含叙事和状态更新的最终JSON对象。这是当前的游戏状态JSON:\n{json.dumps(last_state, ensure_ascii=False)}"
     history_for_part2 = internal_history  # History is now updated before this call
-    ai_response = await get_ai_response(
-        prompt=prompt_for_ai_part2, history=history_for_part2
-    )
+    
+    # 使用流式响应处理第二阶段（通过配置控制）
+    use_stream = settings.ENABLE_STREAMING
+    
+    if use_stream:
+        # 发送流式开始信号
+        await websocket_manager.send_json_to_player(
+            player_id, {"type": "stream_start", "data": {"message": "继续叙事..."}}
+        )
+        
+        ai_response = ""
+        try:
+            async for chunk in get_ai_response_stream(
+                prompt=prompt_for_ai_part2, history=history_for_part2
+            ):
+                ai_response += chunk
+                # 发送流式数据块
+                await websocket_manager.send_json_to_player(
+                    player_id, {"type": "stream_chunk", "data": {"content": chunk}}
+                )
+            
+            # 发送流式结束信号
+            await websocket_manager.send_json_to_player(
+                player_id, {"type": "stream_end", "data": {}}
+            )
+        except Exception as e:
+            logger.error(f"流式响应出错: {e}")
+            # 回退到普通响应
+            ai_response = await get_ai_response(
+                prompt=prompt_for_ai_part2, history=history_for_part2
+            )
+    else:
+        ai_response = await get_ai_response(
+            prompt=prompt_for_ai_part2, history=history_for_part2
+        )
+    
     return ai_response, roll_event
 
 
@@ -240,10 +274,43 @@ async def _process_player_action_async(user_info: dict, action: str):
         session["display_history"].append(f"> {action}")
 
         await state_manager.save_session(player_id, session)
-        # Get AI response
-        ai_json_response_str = await get_ai_response(
-            prompt=prompt_for_ai, history=session["internal_history"]
-        )
+        
+        # 使用流式响应（通过配置控制）
+        use_stream = settings.ENABLE_STREAMING
+        
+        if use_stream:
+            # 发送流式开始信号
+            await websocket_manager.send_json_to_player(
+                player_id, {"type": "stream_start", "data": {"message": "AI正在思考..."}}
+            )
+            
+            # 收集流式响应
+            ai_json_response_str = ""
+            try:
+                async for chunk in get_ai_response_stream(
+                    prompt=prompt_for_ai, history=session["internal_history"]
+                ):
+                    ai_json_response_str += chunk
+                    # 发送流式数据块
+                    await websocket_manager.send_json_to_player(
+                        player_id, {"type": "stream_chunk", "data": {"content": chunk}}
+                    )
+                
+                # 发送流式结束信号
+                await websocket_manager.send_json_to_player(
+                    player_id, {"type": "stream_end", "data": {}}
+                )
+            except Exception as e:
+                logger.error(f"流式响应出错: {e}")
+                # 如果流式失败，回退到普通响应
+                ai_json_response_str = await get_ai_response(
+                    prompt=prompt_for_ai, history=session["internal_history"]
+                )
+        else:
+            # Get AI response (非流式)
+            ai_json_response_str = await get_ai_response(
+                prompt=prompt_for_ai, history=session["internal_history"]
+            )
 
         if ai_json_response_str.startswith("错误："):
             raise Exception(f"OpenAI Client Error: {ai_json_response_str}")

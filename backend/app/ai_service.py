@@ -341,3 +341,134 @@ async def get_anthropic_response(
         force_json=force_json,
         provider="anthropic"
     )
+
+
+async def get_ai_response_stream(
+    prompt: str,
+    history: Optional[List[Dict[str, str]]] = None,
+    model: Optional[str] = None,
+    force_json: bool = True,
+    provider: Optional[str] = None,
+):
+    """
+    获取 AI 流式响应的统一接口
+    
+    Args:
+        prompt: 用户提示
+        history: 对话历史
+        model: 指定模型（可选）
+        force_json: 是否强制返回 JSON 格式
+        provider: 指定使用的提供商（"openai" 或 "anthropic"，可选）
+    
+    Yields:
+        流式响应的文本片段
+    """
+    # 如果还没有初始化完成，进行初始化
+    if not ai_service._initialized:
+        await ai_service._async_init()
+    
+    # 确定使用的提供商
+    provider_enum = None
+    if provider:
+        provider_lower = provider.lower()
+        if provider_lower == "openai":
+            provider_enum = AIProvider.OPENAI
+        elif provider_lower == "anthropic":
+            provider_enum = AIProvider.ANTHROPIC
+    
+    use_provider = provider_enum or ai_service.provider
+    
+    if not use_provider:
+        # 尝试重新选择可用的提供商
+        use_provider = await ai_service._determine_provider()
+        if not use_provider:
+            yield "错误：没有可用的 AI 服务提供商。请检查配置。"
+            return
+    
+    # 检查提供商状态
+    if use_provider in ai_service.provider_status:
+        status = ai_service.provider_status[use_provider]
+        if not status.is_available():
+            logger.warning(f"{use_provider.value} 暂时不可用，尝试切换提供商")
+            # 尝试切换到另一个提供商
+            for alt_provider in [AIProvider.OPENAI, AIProvider.ANTHROPIC]:
+                if alt_provider != use_provider and alt_provider in ai_service.validated_providers:
+                    alt_status = ai_service.provider_status[alt_provider]
+                    if alt_status.is_available():
+                        logger.info(f"切换到 {alt_provider.value}")
+                        use_provider = alt_provider
+                        break
+    
+    # 获取可用的提供商列表（用于故障转移）
+    fallback_providers = []
+    for p in [AIProvider.OPENAI, AIProvider.ANTHROPIC]:
+        if p != use_provider and p in ai_service.validated_providers:
+            if ai_service.provider_status[p].is_available():
+                fallback_providers.append(p)
+    
+    # 尝试调用主提供商
+    try:
+        if use_provider == AIProvider.OPENAI:
+            if not openai_client.client:
+                raise ValueError("OpenAI 客户端未初始化")
+            async for chunk in openai_client.get_ai_response_stream(
+                prompt=prompt,
+                history=history,
+                model=model or settings.OPENAI_MODEL,
+                force_json=force_json
+            ):
+                yield chunk
+            # 记录成功
+            ai_service.provider_status[use_provider].record_success()
+            
+        elif use_provider == AIProvider.ANTHROPIC:
+            if not anthropic_client.client:
+                raise ValueError("Anthropic 客户端未初始化")
+            async for chunk in anthropic_client.get_ai_response_stream(
+                prompt=prompt,
+                history=history,
+                model=model or settings.ANTHROPIC_MODEL if hasattr(settings, 'ANTHROPIC_MODEL') else None,
+                force_json=force_json
+            ):
+                yield chunk
+            # 记录成功
+            ai_service.provider_status[use_provider].record_success()
+        else:
+            raise ValueError(f"未知的 AI 提供商: {use_provider}")
+            
+    except Exception as e:
+        logger.error(f"{use_provider.value} 流式调用失败: {e}")
+        # 记录失败
+        ai_service.provider_status[use_provider].record_failure()
+        
+        # 尝试故障转移到其他提供商
+        for fallback in fallback_providers:
+            logger.info(f"尝试故障转移到 {fallback.value}")
+            try:
+                if fallback == AIProvider.OPENAI:
+                    async for chunk in openai_client.get_ai_response_stream(
+                        prompt=prompt,
+                        history=history,
+                        model=model or settings.OPENAI_MODEL,
+                        force_json=force_json
+                    ):
+                        yield chunk
+                elif fallback == AIProvider.ANTHROPIC:
+                    async for chunk in anthropic_client.get_ai_response_stream(
+                        prompt=prompt,
+                        history=history,
+                        model=model or settings.ANTHROPIC_MODEL if hasattr(settings, 'ANTHROPIC_MODEL') else None,
+                        force_json=force_json
+                    ):
+                        yield chunk
+                
+                # 记录成功
+                ai_service.provider_status[fallback].record_success()
+                # 更新默认提供商为成功的提供商
+                ai_service.provider = fallback
+                return
+            except Exception as e2:
+                logger.error(f"{fallback.value} 也失败了: {e2}")
+                ai_service.provider_status[fallback].record_failure()
+        
+        yield f"\n错误：所有 AI 服务都失败了。最后的错误: {e}"
