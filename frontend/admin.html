@@ -384,6 +384,97 @@
         align-items: center;
       }
 
+      /* 移动端卡片样式 */
+      .mobile-card {
+        display: none;
+        background: white;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s;
+      }
+
+      .mobile-card:active {
+        transform: scale(0.98);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+
+      .mobile-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+
+      .mobile-card-id {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        color: #667eea;
+        word-break: break-all;
+        flex: 1;
+        margin-right: 8px;
+      }
+
+      .mobile-card-time {
+        color: #718096;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .mobile-card-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+
+      .mobile-card-actions {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .mobile-card-actions::-webkit-scrollbar {
+        height: 4px;
+      }
+
+      .mobile-card-actions::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 2px;
+      }
+
+      .mobile-card-actions::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 2px;
+      }
+
+      .mobile-card-actions .btn {
+        flex-shrink: 0;
+      }
+
+      /* 移动端详情面板 */
+      .mobile-detail-toggle {
+        display: none;
+        width: 100%;
+        padding: 12px;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        margin-bottom: 16px;
+      }
+
+      .detail-panel.mobile-collapsed {
+        display: none;
+      }
+
+      /* 移动端响应式布局 */
       @media (max-width: 768px) {
         .container {
           padding: 12px;
@@ -394,32 +485,305 @@
         }
 
         .header h1 {
-          font-size: 22px;
+          font-size: 20px;
+        }
+
+        .header .subtitle {
+          font-size: 12px;
         }
 
         .stats-grid {
-          grid-template-columns: 1fr;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+        }
+
+        .stat-card {
+          padding: 16px;
+        }
+
+        .stat-card .value {
+          font-size: 24px;
+        }
+
+        .stat-card .label {
+          font-size: 11px;
+        }
+
+        .main-panel {
+          padding: 16px;
         }
 
         .panel-header {
           flex-direction: column;
-          align-items: flex-start;
+          align-items: stretch;
+          gap: 12px;
+        }
+
+        .panel-header h2 {
+          font-size: 18px;
         }
 
         .controls {
           width: 100%;
+          flex-direction: column;
+          gap: 10px;
         }
 
         .search-box {
           max-width: 100%;
         }
 
-        table {
-          font-size: 12px;
+        .filter-group {
+          width: 100%;
+          justify-content: space-between;
         }
 
-        th, td {
-          padding: 8px;
+        .filter-group select {
+          flex: 1;
+        }
+
+        /* 隐藏表格，显示卡片 */
+        .table-container {
+          display: none;
+        }
+
+        .mobile-card {
+          display: block;
+        }
+
+        /* 详情面板优化 */
+        .mobile-detail-toggle {
+          display: block;
+        }
+
+        .detail-panel {
+          padding: 16px;
+        }
+
+        .detail-panel h3 {
+          font-size: 16px;
+        }
+
+        .json-viewer {
+          font-size: 11px;
+          max-height: 300px;
+          padding: 12px;
+        }
+
+        /* 通知位置调整 */
+        .notification {
+          top: 10px;
+          right: 10px;
+          left: 10px;
+          max-width: none;
+        }
+
+        /* 按钮优化 */
+        .btn {
+          padding: 10px 16px;
+          font-size: 14px;
+        }
+
+        .btn-small {
+          padding: 6px 12px;
+          font-size: 12px;
+        }
+      }
+
+      /* 超小屏幕优化 */
+      @media (max-width: 480px) {
+        .stats-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .header h1 {
+          font-size: 18px;
+        }
+
+        .mobile-card {
+          padding: 12px;
+        }
+
+        .mobile-card-id {
+          font-size: 11px;
+        }
+      }
+
+      /* 横屏模式优化 */
+      @media (max-width: 768px) and (orientation: landscape) {
+        .stats-grid {
+          grid-template-columns: repeat(4, 1fr);
+        }
+
+        .json-viewer {
+          max-height: 200px;
+        }
+      }
+
+      /* 触摸设备优化 */
+      @media (hover: none) and (pointer: coarse) {
+        .btn {
+          min-height: 44px;
+          min-width: 44px;
+        }
+
+        .mobile-card {
+          cursor: pointer;
+        }
+
+        .mobile-card:hover {
+          background: #f7fafc;
+        }
+      }
+
+      /* 编辑对话框样式 */
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        animation: fadeIn 0.3s ease-out;
+      }
+
+      .modal.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-content {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        animation: slideUp 0.3s ease-out;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .modal-header h2 {
+        margin: 0;
+        color: #2d3748;
+        font-size: 20px;
+      }
+
+      .modal-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #718096;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        transition: all 0.2s;
+      }
+
+      .modal-close:hover {
+        background: #f7fafc;
+        color: #2d3748;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 6px;
+        color: #4a5568;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .form-group input,
+      .form-group textarea,
+      .form-group select {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #cbd5e0;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: border-color 0.2s;
+      }
+
+      .form-group input:focus,
+      .form-group textarea:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
+      .form-group textarea {
+        min-height: 100px;
+        resize: vertical;
+        font-family: 'Courier New', monospace;
+      }
+
+      .form-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        margin-top: 24px;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      @keyframes slideUp {
+        from {
+          transform: translateY(20px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      /* 移动端编辑对话框优化 */
+      @media (max-width: 768px) {
+        .modal-content {
+          width: 95%;
+          max-height: 90vh;
+          padding: 16px;
+        }
+
+        .modal-header h2 {
+          font-size: 18px;
+        }
+
+        .form-group label {
+          font-size: 13px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+          font-size: 13px;
         }
       }
     </style>
@@ -470,6 +834,7 @@
           </div>
         </div>
 
+        <!-- 桌面端表格 -->
         <div class="table-container">
           <table>
             <thead>
@@ -493,15 +858,79 @@
             </tbody>
           </table>
         </div>
+
+        <!-- 移动端卡片容器 -->
+        <div id="mobile-sessions">
+          <!-- 卡片将通过JavaScript动态生成 -->
+        </div>
       </div>
 
-      <div class="detail-panel">
+      <!-- 移动端详情切换按钮 -->
+      <button class="mobile-detail-toggle" id="mobile-detail-toggle" onclick="toggleMobileDetail()">
+        📋 查看详情面板
+      </button>
+
+      <div class="detail-panel mobile-collapsed" id="detail-panel">
         <h3>📋 会话详情</h3>
         <div class="json-viewer" id="detail">
           <div class="empty-state">
             <p>选择"查看"按钮以显示会话详细信息</p>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- 编辑会话对话框 -->
+    <div class="modal" id="edit-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>📝 编辑会话</h2>
+          <button class="modal-close" onclick="closeEditModal()">×</button>
+        </div>
+        <form id="edit-form">
+          <div class="form-group">
+            <label>玩家ID</label>
+            <input type="text" id="edit-player-id" readonly style="background: #f7fafc;">
+          </div>
+          
+          <div class="form-group">
+            <label>机缘次数</label>
+            <input type="number" id="edit-opportunities" min="0" max="100">
+          </div>
+          
+          <div class="form-group">
+            <label>今日成功状态</label>
+            <select id="edit-daily-success">
+              <option value="false">未成功</option>
+              <option value="true">已成功</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>当前试炼</label>
+            <input type="number" id="edit-current-trial" min="1" max="10">
+          </div>
+          
+          <div class="form-group">
+            <label>试炼次数</label>
+            <input type="number" id="edit-trial-count" min="0">
+          </div>
+          
+          <div class="form-group">
+            <label>待处理惩罚 (JSON格式，留空表示无惩罚)</label>
+            <textarea id="edit-punishment" placeholder='例如: {"type": "punishment", "value": 1}'></textarea>
+          </div>
+          
+          <div class="form-group">
+            <label>自定义字段 (JSON格式)</label>
+            <textarea id="edit-custom" placeholder='例如: {"key1": "value1", "key2": 123}'></textarea>
+          </div>
+          
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeEditModal()">取消</button>
+            <button type="submit" class="btn btn-primary">保存修改</button>
+          </div>
+        </form>
       </div>
     </div>
 

@@ -203,6 +203,17 @@ function updateStatistics() {
  * 渲染会话列表
  */
 function renderSessions() {
+  // 渲染桌面端表格
+  renderDesktopTable();
+  
+  // 渲染移动端卡片
+  renderMobileCards();
+}
+
+/**
+ * 渲染桌面端表格
+ */
+function renderDesktopTable() {
   const tbody = document.getElementById('sessions');
   
   if (filteredSessions.length === 0) {
@@ -239,18 +250,7 @@ function renderSessions() {
     
     // 状态
     const tdStatus = document.createElement('td');
-    const badges = [];
-    if (session.daily_success_achieved) {
-      badges.push('<span class="badge badge-success">今日成功</span>');
-    }
-    if (session.pending_punishment) {
-      badges.push('<span class="badge badge-danger">待惩罚</span>');
-    }
-    const lastModified = session.last_modified || 0;
-    const hourAgo = Date.now() / 1000 - 3600;
-    if (lastModified > hourAgo) {
-      badges.push('<span class="badge badge-info">活跃</span>');
-    }
+    const badges = getSessionBadges(session);
     tdStatus.innerHTML = badges.join(' ') || '-';
     tr.appendChild(tdStatus);
     
@@ -270,8 +270,8 @@ function renderSessions() {
       <button class="btn btn-secondary btn-small" data-view="${session.encrypted_id || session.player_id}">
         👁️ 查看
       </button>
-      <button class="btn btn-primary btn-small" data-opportunities="${session.encrypted_id || session.player_id}">
-        🎲 机缘
+      <button class="btn btn-primary btn-small" data-edit="${session.encrypted_id || session.player_id}">
+        ✏️ 编辑
       </button>
       <button class="btn btn-danger btn-small" data-clear="${session.encrypted_id || session.player_id}">
         🗑️ 清空
@@ -281,6 +281,79 @@ function renderSessions() {
     
     tbody.appendChild(tr);
   });
+}
+
+/**
+ * 渲染移动端卡片
+ */
+function renderMobileCards() {
+  const container = document.getElementById('mobile-sessions');
+  
+  if (filteredSessions.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <p>😔 没有找到符合条件的会话</p>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = '';
+  
+  filteredSessions.forEach(session => {
+    const card = document.createElement('div');
+    card.className = 'mobile-card';
+    
+    const badges = getSessionBadges(session);
+    const punishmentInfo = session.pending_punishment
+      ? `<div style="color: #e53e3e; font-size: 11px; margin-top: 8px;">
+          惩罚: ${JSON.stringify(session.pending_punishment)}
+        </div>`
+      : '';
+    
+    card.innerHTML = `
+      <div class="mobile-card-header">
+        <div class="mobile-card-id">${session.player_id}</div>
+        <div class="mobile-card-time">${formatRelativeTime(session.last_modified)}</div>
+      </div>
+      <div class="mobile-card-badges">
+        ${badges.join(' ')}
+      </div>
+      ${punishmentInfo}
+      <div class="mobile-card-actions">
+        <button class="btn btn-secondary btn-small" data-view="${session.encrypted_id || session.player_id}">
+          👁️ 查看
+        </button>
+        <button class="btn btn-primary btn-small" data-edit="${session.encrypted_id || session.player_id}">
+          ✏️ 编辑
+        </button>
+        <button class="btn btn-danger btn-small" data-clear="${session.encrypted_id || session.player_id}">
+          🗑️ 清空
+        </button>
+      </div>
+    `;
+    
+    container.appendChild(card);
+  });
+}
+
+/**
+ * 获取会话的徽章
+ */
+function getSessionBadges(session) {
+  const badges = [];
+  if (session.daily_success_achieved) {
+    badges.push('<span class="badge badge-success">今日成功</span>');
+  }
+  if (session.pending_punishment) {
+    badges.push('<span class="badge badge-danger">待惩罚</span>');
+  }
+  const lastModified = session.last_modified || 0;
+  const hourAgo = Date.now() / 1000 - 3600;
+  if (lastModified > hourAgo) {
+    badges.push('<span class="badge badge-info">活跃</span>');
+  }
+  return badges;
 }
 
 /**
@@ -397,6 +470,125 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// ==================== 编辑功能 ====================
+
+let currentEditingId = null;
+
+/**
+ * 打开编辑对话框
+ */
+async function openEditModal(idOrEnc) {
+  try {
+    currentEditingId = idOrEnc;
+    
+    // 获取会话详情
+    const session = await fetchJSON(`/api/admin/session/${encodeURIComponent(idOrEnc)}`);
+    
+    // 填充表单
+    document.getElementById('edit-player-id').value = session.player_id || '';
+    document.getElementById('edit-opportunities').value = session.opportunities_remaining || 0;
+    document.getElementById('edit-daily-success').value = session.daily_success_achieved ? 'true' : 'false';
+    document.getElementById('edit-current-trial').value = session.current_trial || 1;
+    document.getElementById('edit-trial-count').value = session.trial_count || 0;
+    
+    // 处理惩罚字段
+    if (session.pending_punishment) {
+      document.getElementById('edit-punishment').value = JSON.stringify(session.pending_punishment, null, 2);
+    } else {
+      document.getElementById('edit-punishment').value = '';
+    }
+    
+    // 清空自定义字段
+    document.getElementById('edit-custom').value = '';
+    
+    // 显示对话框
+    document.getElementById('edit-modal').classList.add('active');
+  } catch (error) {
+    console.error('打开编辑对话框失败:', error);
+    showNotification(`打开编辑失败: ${error.message}`, 'error');
+  }
+}
+
+/**
+ * 关闭编辑对话框
+ */
+window.closeEditModal = function() {
+  document.getElementById('edit-modal').classList.remove('active');
+  currentEditingId = null;
+}
+
+/**
+ * 保存编辑
+ */
+async function saveEdit(e) {
+  e.preventDefault();
+  
+  if (!currentEditingId) {
+    showNotification('编辑会话ID丢失', 'error');
+    return;
+  }
+  
+  try {
+    const updates = {};
+    
+    // 收集基本字段
+    const opportunities = parseInt(document.getElementById('edit-opportunities').value);
+    if (!isNaN(opportunities)) {
+      updates.opportunities_remaining = opportunities;
+    }
+    
+    updates.daily_success_achieved = document.getElementById('edit-daily-success').value === 'true';
+    
+    const currentTrial = parseInt(document.getElementById('edit-current-trial').value);
+    if (!isNaN(currentTrial)) {
+      updates.current_trial = currentTrial;
+    }
+    
+    const trialCount = parseInt(document.getElementById('edit-trial-count').value);
+    if (!isNaN(trialCount)) {
+      updates.trial_count = trialCount;
+    }
+    
+    // 处理惩罚字段
+    const punishmentText = document.getElementById('edit-punishment').value.trim();
+    if (punishmentText) {
+      try {
+        updates.pending_punishment = JSON.parse(punishmentText);
+      } catch (e) {
+        showNotification('惩罚字段JSON格式错误', 'error');
+        return;
+      }
+    } else {
+      updates.pending_punishment = null;
+    }
+    
+    // 处理自定义字段
+    const customText = document.getElementById('edit-custom').value.trim();
+    if (customText) {
+      try {
+        const customFields = JSON.parse(customText);
+        Object.assign(updates, customFields);
+      } catch (e) {
+        showNotification('自定义字段JSON格式错误', 'error');
+        return;
+      }
+    }
+    
+    // 发送更新请求
+    await fetchJSON(`/api/admin/sessions/${encodeURIComponent(currentEditingId)}/update`, {
+      method: 'POST',
+      body: JSON.stringify(updates)
+    });
+    
+    showNotification('会话更新成功', 'success');
+    closeEditModal();
+    await loadSessions(); // 重新加载列表
+  } catch (error) {
+    console.error('保存编辑失败:', error);
+    showNotification(`保存失败: ${error.message}`, 'error');
+  }
+}
+
 // ==================== 事件绑定 ====================
 
 /**
@@ -425,26 +617,11 @@ function bindEvents() {
     loadSessions();
   });
   
-  // 表格操作按钮
-  document.getElementById('sessions').addEventListener('click', (e) => {
-    const viewId = e.target.getAttribute('data-view');
-    if (viewId) {
-      showDetail(viewId);
-      return;
-    }
-    
-    const clearId = e.target.getAttribute('data-clear');
-    if (clearId) {
-      clearSession(clearId);
-      return;
-    }
-    
-    const opportunitiesId = e.target.getAttribute('data-opportunities');
-    if (opportunitiesId) {
-      updateOpportunities(opportunitiesId);
-      return;
-    }
-  });
+  // 表格操作按钮（桌面端）
+  document.getElementById('sessions').addEventListener('click', handleActionClick);
+  
+  // 移动端卡片操作按钮
+  document.getElementById('mobile-sessions').addEventListener('click', handleActionClick);
   
   // 键盘快捷键
   document.addEventListener('keydown', (e) => {
@@ -460,6 +637,62 @@ function bindEvents() {
       document.getElementById('search').focus();
     }
   });
+  
+  // 绑定编辑表单提交事件
+  const editForm = document.getElementById('edit-form');
+  if (editForm) {
+    editForm.addEventListener('submit', saveEdit);
+  }
+  
+  // 点击模态框背景关闭
+  const modal = document.getElementById('edit-modal');
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeEditModal();
+      }
+    });
+  }
+}
+
+/**
+ * 处理操作按钮点击
+ */
+function handleActionClick(e) {
+  const viewId = e.target.getAttribute('data-view');
+  if (viewId) {
+    showDetail(viewId);
+    return;
+  }
+  
+  const clearId = e.target.getAttribute('data-clear');
+  if (clearId) {
+    clearSession(clearId);
+    return;
+  }
+  
+  const editId = e.target.getAttribute('data-edit');
+  if (editId) {
+    openEditModal(editId);
+    return;
+  }
+}
+
+/**
+ * 切换移动端详情面板
+ */
+window.toggleMobileDetail = function() {
+  const panel = document.getElementById('detail-panel');
+  const button = document.getElementById('mobile-detail-toggle');
+  
+  if (panel.classList.contains('mobile-collapsed')) {
+    panel.classList.remove('mobile-collapsed');
+    button.textContent = '📋 隐藏详情面板';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } else {
+    panel.classList.add('mobile-collapsed');
+    button.textContent = '📋 查看详情面板';
+  }
 }
 
 // ==================== 初始化 ====================
