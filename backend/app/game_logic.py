@@ -132,7 +132,13 @@ async def _handle_roll_request(
     )
     await asyncio.sleep(0.03)  # Give time for async websocket delivery
 
-    prompt_for_ai_part2 = f"{result_text}\n\n请严格基于此判定结果，继续叙事，并返回包含叙事和状态更新的最终JSON对象。这是当前的游戏状态JSON:\n{json.dumps(last_state, ensure_ascii=False)}"
+    prompt_for_ai_part2 = (
+        f"{result_text}\n\n"
+        "请严格基于此判定结果继续叙事。先输出叙事的纯文本（可用Markdown，避免代码块），"
+        "随后在一个独立的 ```json 代码块 中给出最终的严格JSON对象，"
+        "该对象包含 `narrative` 与 `state_update` 两个字段，且必须为合法JSON（不能有注释或多余文本）。\n\n"
+        f"这是当前的游戏状态JSON:\n{json.dumps(last_state, ensure_ascii=False)}"
+    )
     history_for_part2 = internal_history  # History is now updated before this call
     
     # 使用流式响应处理第二阶段（通过配置控制）
@@ -268,6 +274,19 @@ async def _process_player_action_async(user_info: dict, action: str):
             if is_starting_trial
             else f'这是当前的游戏状态JSON:\n{json.dumps(session_copy, ensure_ascii=False)}\n\n玩家的行动是: "{action}"\n\n请根据状态和行动，生成包含`narrative`和(`state_update`或`roll_request`)的JSON作为回应。如果角色死亡，请在叙述中说明，并在`state_update`中同时将`is_in_trial`设为`false`，`current_life`设为`null`。'
         )
+        
+        # 为流式输出优化：当不是开启新轮回时，改用“先叙事后JSON代码块”的输出约定
+        if not is_starting_trial:
+            prompt_for_ai = (
+                "这是当前的游戏状态JSON:\n"
+                f"{json.dumps(session_copy, ensure_ascii=False)}\n\n"
+                f"玩家的行动是: \"{action}\"\n\n"
+                "请根据状态和行动先输出叙事的纯文本（可用Markdown，避免代码块），"
+                "随后在一个独立的 ```json 代码块 中，输出严格的JSON对象作为机器可读结果，"
+                "该JSON对象必须包含 `narrative` 字段和 (`state_update` 或 `roll_request`) 字段，"
+                "且必须是合法JSON（不能有注释或多余文本）。"
+                "若角色死亡，请在叙述中说明，并在 `state_update` 中将 `is_in_trial` 设为 `false`、`current_life` 设为 `null`。"
+            )
 
         # Update histories with user action first
         session["internal_history"].append({"role": "user", "content": action})
