@@ -676,17 +676,33 @@ async function saveEdit(e) {
 
       // 处理自定义字段（从高级编辑器收集）
       const customFields = document.querySelectorAll('[data-custom-field]');
-      customFields.forEach(input => {
-        const key = input.dataset.customField;
-        const value = input.value.trim();
+      customFields.forEach(element => {
+        const key = element.dataset.customField;
+        const value = element.value.trim();
         if (key && value) {
           // 尝试解析值类型
           let parsedValue = value;
-          if (value === 'true') parsedValue = true;
-          else if (value === 'false') parsedValue = false;
-          else if (!isNaN(value) && value !== '') parsedValue = Number(value);
+
+          // 对于 textarea，尝试解析 JSON
+          if (element.tagName === 'TEXTAREA') {
+            try {
+              parsedValue = JSON.parse(value);
+            } catch (e) {
+              // 如果解析失败，保留原始字符串
+              parsedValue = value;
+            }
+          } else {
+            // 对于 input，进行类型推断
+            if (value === 'true') parsedValue = true;
+            else if (value === 'false') parsedValue = false;
+            else if (value === 'null') parsedValue = null;
+            else if (!isNaN(value) && value !== '') parsedValue = Number(value);
+          }
 
           updates[key] = parsedValue;
+        } else if (key && value === '') {
+          // 如果值为空，设置为 null
+          updates[key] = null;
         }
       });
     }

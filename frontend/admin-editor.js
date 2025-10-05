@@ -411,11 +411,28 @@ function addCustomFieldItem(key, value) {
     return div.innerHTML;
   };
 
+  // 处理复杂数据类型
+  let displayValue = value;
+  let inputType = 'text';
+  let inputElement = '';
+
+  if (value === null || value === undefined) {
+    displayValue = 'null';
+  } else if (typeof value === 'object') {
+    // 对于对象和数组，使用 textarea 显示 JSON
+    displayValue = JSON.stringify(value, null, 2);
+    inputElement = `<textarea data-custom-field="${escapeHtml(key)}" style="min-height: 100px; font-family: monospace; font-size: 12px;">${escapeHtml(displayValue)}</textarea>`;
+  } else {
+    // 对于基本类型，使用普通 input
+    displayValue = String(value);
+    inputElement = `<input type="text" value="${escapeHtml(displayValue)}" data-custom-field="${escapeHtml(key)}">`;
+  }
+
   const field = document.createElement('div');
   field.className = 'json-field';
   field.innerHTML = `
     <label>${escapeHtml(key)}</label>
-    <input type="text" value="${escapeHtml(String(value))}" data-custom-field="${escapeHtml(key)}">
+    ${inputElement}
     <button type="button" onclick="removeCustomField(this, '${escapeHtml(key)}')">删除</button>
   `;
 
