@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台保存测试</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .log-output {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .success {
+            color: #48bb78;
+        }
+        .error {
+            color: #f56565;
+        }
+        .warning {
+            color: #ed8936;
+        }
+        .info {
+            color: #4299e1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 管理后台保存功能测试</h1>
+
+        <div class="test-section">
+            <h2>测试说明</h2>
+            <p>这个页面用于测试管理后台的高级编辑保存功能。请按以下步骤操作：</p>
+            <ol>
+                <li>在管理后台打开一个会话的编辑对话框</li>
+                <li>切换到"高级编辑"标签</li>
+                <li>修改游戏状态字段</li>
+                <li>点击"保存修改"</li>
+                <li>查看浏览器控制台的日志输出</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h2>模拟测试</h2>
+            <button onclick="testGameStateUpdate()">测试游戏状态更新</button>
+            <button onclick="testCustomFieldsSave()">测试自定义字段保存</button>
+            <button onclick="testFullSessionSave()">测试完整会话保存</button>
+            <button onclick="clearLog()">清空日志</button>
+        </div>
+
+        <div class="test-section">
+            <h2>日志输出</h2>
+            <div id="log" class="log-output">等待测试...</div>
+        </div>
+
+        <div class="test-section">
+            <h2>调试提示</h2>
+            <p>请打开浏览器的开发者工具（F12），查看Console标签页中的以下日志：</p>
+            <ul>
+                <li><span class="info">[游戏状态更新]</span> - 游戏状态字段收集</li>
+                <li><span class="info">[保存编辑]</span> - 保存过程的详细信息</li>
+                <li><span class="warning">[保存编辑] 游戏状态textarea内容</span> - textarea的实际内容</li>
+                <li><span class="success">[保存编辑] 最终更新对象</span> - 发送到后端的数据</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = type;
+            logDiv.innerHTML += `<span class="${colorClass}">[${timestamp}] ${message}</span>\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '日志已清空\n';
+        }
+
+        function testGameStateUpdate() {
+            log('开始测试游戏状态更新...', 'info');
+
+            // 模拟游戏状态数据
+            const gameState = {
+                session_date: "2025-10-05",
+                is_in_trial: true,
+                is_processing: false,
+                unchecked_rounds_count: 6,
+                current_life: {
+                    "姓名": "测试角色",
+                    "生命值": 85,
+                    "最大生命值": 100,
+                    "灵石": 10,
+                    "物品": [
+                        {"名称": "测试物品", "数量": 1}
+                    ],
+                    "属性": {
+                        "筋骨": 50,
+                        "心境": 50
+                    }
+                }
+            };
+
+            log('游戏状态对象创建成功', 'success');
+            log('字段数量: ' + Object.keys(gameState).length, 'info');
+
+            // 模拟转换为JSON字符串（就像textarea中的内容）
+            const jsonStr = JSON.stringify(gameState, null, 2);
+            log('JSON字符串长度: ' + jsonStr.length + ' 字符', 'info');
+
+            // 模拟解析JSON
+            try {
+                const parsed = JSON.parse(jsonStr);
+                log('JSON解析成功！', 'success');
+                log('解析后字段: ' + Object.keys(parsed).join(', '), 'info');
+
+                // 模拟合并到updates对象
+                const updates = {};
+                Object.assign(updates, parsed);
+                log('合并到updates成功，最终字段数: ' + Object.keys(updates).length, 'success');
+
+            } catch (e) {
+                log('JSON解析失败: ' + e.message, 'error');
+            }
+        }
+
+        function testCustomFieldsSave() {
+            log('开始测试自定义字段保存...', 'info');
+
+            // 模拟自定义字段
+            const customFields = [
+                { key: 'test_string', value: 'hello world', type: 'string' },
+                { key: 'test_number', value: '42', type: 'number' },
+                { key: 'test_boolean', value: 'true', type: 'boolean' },
+                { key: 'test_null', value: 'null', type: 'null' },
+                { key: 'test_json', value: '{"nested": "object"}', type: 'json' }
+            ];
+
+            const updates = {};
+
+            customFields.forEach(field => {
+                log(`处理字段: ${field.key} = ${field.value} (类型: ${field.type})`, 'info');
+
+                let parsedValue = field.value;
+
+                // 模拟类型推断
+                if (field.type === 'json') {
+                    try {
+                        parsedValue = JSON.parse(field.value);
+                    } catch (e) {
+                        parsedValue = field.value;
+                    }
+                } else if (field.value === 'true') {
+                    parsedValue = true;
+                } else if (field.value === 'false') {
+                    parsedValue = false;
+                } else if (field.value === 'null') {
+                    parsedValue = null;
+                } else if (!isNaN(field.value) && field.value !== '') {
+                    parsedValue = Number(field.value);
+                }
+
+                updates[field.key] = parsedValue;
+                log(`  -> 解析后: ${JSON.stringify(parsedValue)} (类型: ${typeof parsedValue})`, 'success');
+            });
+
+            log('所有自定义字段处理完成', 'success');
+            log('最终updates对象: ' + JSON.stringify(updates, null, 2), 'info');
+        }
+
+        function testFullSessionSave() {
+            log('开始测试完整会话保存...', 'info');
+
+            // 模拟完整的更新流程
+            const updates = {};
+
+            // 基础字段
+            updates.opportunities_remaining = 5;
+            updates.daily_success_achieved = false;
+            log('添加基础字段', 'info');
+
+            // 游戏状态
+            const gameState = {
+                session_date: "2025-10-05",
+                is_in_trial: true,
+                current_life: {
+                    "姓名": "测试角色",
+                    "生命值": 100
+                }
+            };
+            Object.assign(updates, gameState);
+            log('合并游戏状态', 'info');
+
+            // 自定义字段
+            updates.custom_field_1 = "test";
+            updates.custom_field_2 = 123;
+            log('添加自定义字段', 'info');
+
+            log('最终更新对象字段数: ' + Object.keys(updates).length, 'success');
+            log('最终更新对象内容:\n' + JSON.stringify(updates, null, 2), 'success');
+
+            // 模拟发送请求
+            log('模拟发送POST请求到 /api/admin/sessions/[id]/update', 'warning');
+            log('请求体大小: ' + JSON.stringify(updates).length + ' 字节', 'info');
+
+            // 检查是否包含关键字段
+            const requiredFields = ['current_life', 'session_date', 'is_in_trial'];
+            const missingFields = requiredFields.filter(f => !(f in updates));
+
+            if (missingFields.length === 0) {
+                log('✅ 所有关键字段都存在！', 'success');
+            } else {
+                log('❌ 缺少关键字段: ' + missingFields.join(', '), 'error');
+            }
+        }
+
+        // 页面加载时的提示
+        window.addEventListener('load', () => {
+            log('测试页面已加载', 'info');
+            log('请点击上方按钮开始测试', 'info');
+            log('同时请在管理后台实际操作，观察控制台输出', 'warning');
+        });
+    </script>
+</body>
+</html>

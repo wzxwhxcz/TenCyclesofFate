@@ -213,6 +213,7 @@ function updateGameStateTextarea() {
   }
 
   const gameState = {};
+  let fieldCount = 0;
 
   editor.querySelectorAll('.json-field').forEach(field => {
     const keyInput = field.querySelector('.field-key');
@@ -223,6 +224,7 @@ function updateGameStateTextarea() {
     const key = keyInput.value.trim();
 
     if (key) {
+      fieldCount++;
       let parsedValue;
 
       // 根据输入类型处理值
@@ -253,9 +255,14 @@ function updateGameStateTextarea() {
     }
   });
 
+  console.log(`[游戏状态更新] 收集了 ${fieldCount} 个字段:`, gameState);
+
   // 只在textarea存在时更新
   if (textarea) {
     textarea.value = JSON.stringify(gameState, null, 2);
+    console.log('[游戏状态更新] 已更新textarea内容');
+  } else {
+    console.warn('[游戏状态更新] textarea元素未找到');
   }
 }
 
@@ -576,11 +583,26 @@ function initEditorEvents() {
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       switchEditTab(btn.dataset.tab);
+      // 切换到高级编辑标签时，确保更新textarea
+      if (btn.dataset.tab === 'advanced') {
+        updateGameStateTextarea();
+        updateTrialHistoryTextarea();
+      }
     });
   });
 
   // 监听游戏状态编辑器的变化
   document.addEventListener('input', (e) => {
+    if (e.target.closest('#game-state-editor')) {
+      updateGameStateTextarea();
+    }
+    if (e.target.closest('#trial-history-editor')) {
+      updateTrialHistoryTextarea();
+    }
+  });
+
+  // 监听游戏状态编辑器的change事件（用于select和textarea）
+  document.addEventListener('change', (e) => {
     if (e.target.closest('#game-state-editor')) {
       updateGameStateTextarea();
     }
@@ -693,5 +715,7 @@ window.editorFunctions = {
   initTrialHistoryEditor,
   initCustomFieldsEditor,
   initCurrentLifeEditor,
-  initEditorEvents
+  initEditorEvents,
+  updateGameStateTextarea,
+  updateTrialHistoryTextarea
 };

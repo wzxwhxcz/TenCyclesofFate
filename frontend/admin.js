@@ -639,16 +639,26 @@ async function saveEdit(e) {
       }
 
       // 处理游戏状态
+      // 先确保游戏状态已更新到textarea
+      if (window.editorFunctions && window.editorFunctions.updateGameStateTextarea) {
+        window.editorFunctions.updateGameStateTextarea();
+      }
+
       const gameStateText = document.getElementById('edit-game-state').value.trim();
+      console.log('[保存编辑] 游戏状态textarea内容:', gameStateText);
       if (gameStateText) {
         try {
           const gameStateData = JSON.parse(gameStateText);
           // 将游戏状态中的字段合并到updates中
           Object.assign(updates, gameStateData);
+          console.log('[保存编辑] 游戏状态字段已合并到updates:', gameStateData);
         } catch (e) {
+          console.error('[保存编辑] 游戏状态JSON解析失败:', e);
           showNotification('游戏状态JSON格式错误', 'error');
           return;
         }
+      } else {
+        console.log('[保存编辑] 游戏状态textarea为空');
       }
 
       // 处理试炼历史
@@ -683,9 +693,11 @@ async function saveEdit(e) {
 
       // 处理自定义字段（从高级编辑器收集）
       const customFields = document.querySelectorAll('[data-custom-field]');
+      console.log(`[保存编辑] 找到 ${customFields.length} 个自定义字段`);
       customFields.forEach(element => {
         const key = element.dataset.customField;
         const value = element.value.trim();
+        console.log(`[保存编辑] 处理自定义字段: ${key} = ${value.substring(0, 100)}...`);
         if (key && value) {
           // 尝试解析值类型
           let parsedValue = value;
@@ -713,6 +725,10 @@ async function saveEdit(e) {
         }
       });
     }
+
+    // 记录最终的更新对象
+    console.log('[保存编辑] 最终更新对象:', updates);
+    console.log('[保存编辑] 更新字段数量:', Object.keys(updates).length);
 
     // 发送更新请求
     await fetchJSON(`/api/admin/sessions/${encodeURIComponent(editingId)}/update`, {
