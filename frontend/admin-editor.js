@@ -157,24 +157,24 @@ function addGameStateField(key = '', value = '') {
   // 根据值的类型创建不同的输入控件
   let valueInput = '';
   if (value === null || value === undefined) {
-    valueInput = `<input type="text" placeholder="字段值" value="null" class="field-value">`;
+    valueInput = `<input type="text" placeholder="字段值" value="null" class="field-value" onchange="updateGameStateTextarea()" oninput="updateGameStateTextarea()">`;
   } else if (typeof value === 'object') {
     // 对于对象和数组，使用textarea显示JSON
     const jsonStr = JSON.stringify(value, null, 2);
-    valueInput = `<textarea class="field-value" style="min-height: 100px; width: 100%; font-family: monospace; font-size: 12px;" placeholder="JSON格式的值">${escapeHtml(jsonStr)}</textarea>`;
+    valueInput = `<textarea class="field-value" style="min-height: 100px; width: 100%; font-family: monospace; font-size: 12px;" placeholder="JSON格式的值" onchange="updateGameStateTextarea()" oninput="updateGameStateTextarea()">${escapeHtml(jsonStr)}</textarea>`;
   } else if (typeof value === 'boolean') {
     valueInput = `
-      <select class="field-value">
+      <select class="field-value" onchange="updateGameStateTextarea()">
         <option value="true" ${value === true ? 'selected' : ''}>true</option>
         <option value="false" ${value === false ? 'selected' : ''}>false</option>
       </select>`;
   } else {
-    valueInput = `<input type="text" placeholder="字段值" value="${escapeHtml(String(value))}" class="field-value">`;
+    valueInput = `<input type="text" placeholder="字段值" value="${escapeHtml(String(value))}" class="field-value" onchange="updateGameStateTextarea()" oninput="updateGameStateTextarea()">`;
   }
 
   field.innerHTML = `
     <label style="display: inline-block; min-width: 150px; font-weight: bold;">${escapeHtml(key || '新字段')}</label>
-    <input type="text" placeholder="字段名" value="${escapeHtml(key)}" class="field-key" style="margin-right: 10px; width: 150px;">
+    <input type="text" placeholder="字段名" value="${escapeHtml(key)}" class="field-key" style="margin-right: 10px; width: 150px;" onchange="updateGameStateTextarea()" oninput="updateGameStateTextarea()">
     ${valueInput}
     <button type="button" onclick="removeGameStateField(this)" style="margin-left: 10px;">删除</button>
   `;
@@ -203,7 +203,7 @@ window.removeGameStateField = function(btn) {
 /**
  * 更新游戏状态textarea
  */
-function updateGameStateTextarea() {
+window.updateGameStateTextarea = function updateGameStateTextarea() {
   const editor = document.getElementById('game-state-editor');
   const textarea = document.getElementById('edit-game-state');
 

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试游戏状态编辑器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #1a1a2e;
+            color: #eee;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #16213e;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .json-field {
+            margin: 10px 0;
+            padding: 10px;
+            background: #0f3460;
+            border-radius: 4px;
+        }
+        input, textarea, select {
+            background: #1a1a2e;
+            color: #eee;
+            border: 1px solid #444;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        #output {
+            margin-top: 20px;
+            padding: 15px;
+            background: #0f3460;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        label {
+            display: inline-block;
+            min-width: 150px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>游戏状态编辑器测试</h1>
+
+        <div id="game-state-editor" class="json-editor">
+            <!-- 动态生成的字段编辑器 -->
+        </div>
+
+        <textarea id="edit-game-state" style="display:none;"></textarea>
+
+        <div style="margin-top: 20px;">
+            <button onclick="showTextareaContent()">显示Textarea内容</button>
+            <button onclick="addTestData()">添加测试数据</button>
+            <button onclick="clearEditor()">清空编辑器</button>
+        </div>
+
+        <div id="output">
+            <strong>Textarea内容：</strong>
+            <div id="textarea-content">等待初始化...</div>
+        </div>
+    </div>
+
+    <script src="frontend/admin-editor.js"></script>
+    <script>
+        // 初始化编辑器
+        window.onload = function() {
+            // 创建测试数据
+            const testData = {
+                player_id: 'wzxwhxcz',
+                session_date: '2025-10-05',
+                opportunities_remaining: 9,
+                daily_success_achieved: false,
+                is_in_trial: true,
+                current_life: {
+                    name: "测试角色",
+                    age: 25,
+                    profession: "冒险者"
+                },
+                roll_event: null,
+                internal_history: ["开始游戏", "第一次行动"],
+                test_number: 42,
+                test_boolean: true
+            };
+
+            // 初始化游戏状态编辑器
+            if (window.editorFunctions && window.editorFunctions.initGameStateEditor) {
+                window.editorFunctions.initGameStateEditor(testData);
+                console.log('编辑器已初始化');
+                showTextareaContent();
+            } else {
+                console.error('editorFunctions未找到');
+            }
+        };
+
+        // 显示textarea内容
+        function showTextareaContent() {
+            const textarea = document.getElementById('edit-game-state');
+            const output = document.getElementById('textarea-content');
+
+            if (textarea) {
+                output.textContent = textarea.value || '(空)';
+                console.log('Textarea内容:', textarea.value);
+            } else {
+                output.textContent = 'Textarea未找到';
+            }
+        }
+
+        // 添加测试数据
+        function addTestData() {
+            if (window.addGameStateField) {
+                window.addGameStateField('new_field_' + Date.now(), '测试值' + Math.random());
+                showTextareaContent();
+            }
+        }
+
+        // 清空编辑器
+        function clearEditor() {
+            if (window.editorFunctions && window.editorFunctions.initGameStateEditor) {
+                window.editorFunctions.initGameStateEditor({});
+                showTextareaContent();
+            }
+        }
+
+        // 实时监听textarea变化
+        setInterval(showTextareaContent, 1000);
+    </script>
+</body>
+</html>

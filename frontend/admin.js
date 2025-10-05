@@ -561,6 +561,12 @@ async function openEditModal(idOrEnc) {
 
       // 初始化自定义字段编辑器
       window.editorFunctions.initCustomFieldsEditor(session);
+
+      // 绑定高级编辑器的输入/变更事件，确保隐藏textarea实时同步
+      // KISS: 仅集中注册一次统一事件监听，避免在各处重复绑定（DRY）
+      if (typeof window.editorFunctions.initEditorEvents === 'function') {
+        window.editorFunctions.initEditorEvents();
+      }
     }
 
     // 填充完整会话JSON
