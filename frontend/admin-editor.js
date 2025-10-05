@@ -81,12 +81,25 @@ function initGameStateEditor(gameState) {
     return;
   }
 
-  // textarea 不是必需的，只用作内部数据存储
-
   editor.innerHTML = '';
 
+  // 使用当前会话数据或创建空对象
   if (!gameState || typeof gameState !== 'object') {
-    gameState = {};
+    // 如果有当前编辑的会话，尝试使用它的数据
+    if (window.currentEditingSession) {
+      gameState = {
+        session_date: window.currentEditingSession.session_date,
+        is_in_trial: window.currentEditingSession.is_in_trial,
+        is_processing: window.currentEditingSession.is_processing,
+        unchecked_rounds_count: window.currentEditingSession.unchecked_rounds_count,
+        current_life: window.currentEditingSession.current_life,
+        internal_history: window.currentEditingSession.internal_history,
+        display_history: window.currentEditingSession.display_history,
+        roll_event: window.currentEditingSession.roll_event
+      };
+    } else {
+      gameState = {};
+    }
   }
 
   // 为每个字段创建编辑控件
@@ -141,10 +154,29 @@ function addGameStateField(key = '', value = '') {
     return div.innerHTML;
   };
 
+  // 根据值的类型创建不同的输入控件
+  let valueInput = '';
+  if (value === null || value === undefined) {
+    valueInput = `<input type="text" placeholder="字段值" value="null" class="field-value">`;
+  } else if (typeof value === 'object') {
+    // 对于对象和数组，使用textarea显示JSON
+    const jsonStr = JSON.stringify(value, null, 2);
+    valueInput = `<textarea class="field-value" style="min-height: 100px; width: 100%; font-family: monospace; font-size: 12px;" placeholder="JSON格式的值">${escapeHtml(jsonStr)}</textarea>`;
+  } else if (typeof value === 'boolean') {
+    valueInput = `
+      <select class="field-value">
+        <option value="true" ${value === true ? 'selected' : ''}>true</option>
+        <option value="false" ${value === false ? 'selected' : ''}>false</option>
+      </select>`;
+  } else {
+    valueInput = `<input type="text" placeholder="字段值" value="${escapeHtml(String(value))}" class="field-value">`;
+  }
+
   field.innerHTML = `
-    <input type="text" placeholder="字段名" value="${escapeHtml(key)}" class="field-key">
-    <input type="text" placeholder="字段值" value="${escapeHtml(String(value))}" class="field-value">
-    <button type="button" onclick="removeGameStateField(this)">删除</button>
+    <label style="display: inline-block; min-width: 150px; font-weight: bold;">${escapeHtml(key || '新字段')}</label>
+    <input type="text" placeholder="字段名" value="${escapeHtml(key)}" class="field-key" style="margin-right: 10px; width: 150px;">
+    ${valueInput}
+    <button type="button" onclick="removeGameStateField(this)" style="margin-left: 10px;">删除</button>
   `;
 
   editor.appendChild(field);
@@ -183,15 +215,39 @@ function updateGameStateTextarea() {
   const gameState = {};
 
   editor.querySelectorAll('.json-field').forEach(field => {
-    const key = field.querySelector('.field-key').value.trim();
-    const value = field.querySelector('.field-value').value.trim();
+    const keyInput = field.querySelector('.field-key');
+    const valueInput = field.querySelector('.field-value');
+
+    if (!keyInput || !valueInput) return;
+
+    const key = keyInput.value.trim();
 
     if (key) {
-      // 尝试解析为数字或布尔值
-      let parsedValue = value;
-      if (value === 'true') parsedValue = true;
-      else if (value === 'false') parsedValue = false;
-      else if (!isNaN(value) && value !== '') parsedValue = Number(value);
+      let parsedValue;
+
+      // 根据输入类型处理值
+      if (valueInput.tagName === 'TEXTAREA') {
+        // 对于textarea，尝试解析为JSON
+        const value = valueInput.value.trim();
+        try {
+          parsedValue = JSON.parse(value);
+        } catch (e) {
+          // 如果解析失败，保留原始字符串
+          parsedValue = value;
+        }
+      } else if (valueInput.tagName === 'SELECT') {
+        // 对于select，获取选中的值并转换为布尔值
+        parsedValue = valueInput.value === 'true';
+      } else {
+        // 对于普通input，进行类型推断
+        const value = valueInput.value.trim();
+        if (value === 'true') parsedValue = true;
+        else if (value === 'false') parsedValue = false;
+        else if (value === 'null') parsedValue = null;
+        else if (value === 'undefined') parsedValue = undefined;
+        else if (!isNaN(value) && value !== '') parsedValue = Number(value);
+        else parsedValue = value;
+      }
 
       gameState[key] = parsedValue;
     }
@@ -534,6 +590,101 @@ function initEditorEvents() {
   });
 }
 
+/**
+ * 初始化current_life编辑器
+ */
+function initCurrentLifeEditor(currentLife) {
+  // 查找current_life字段的编辑器
+  const editor = document.getElementById('game-state-editor');
+  if (!editor) return;
+
+  // 查找current_life字段
+  const fields = editor.querySelectorAll('.json-field');
+  fields.forEach(field => {
+    const keyInput = field.querySelector('.field-key');
+    if (keyInput && keyInput.value === 'current_life') {
+      // 为current_life创建更友好的编辑界面
+      const valueInput = field.querySelector('.field-value');
+      if (valueInput && valueInput.tagName === 'TEXTAREA') {
+        // 添加辅助按钮
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = 'margin-top: 5px;';
+
+        const formatBtn = document.createElement('button');
+        formatBtn.type = 'button';
+        formatBtn.className = 'btn-small';
+        formatBtn.textContent = '格式化';
+        formatBtn.onclick = () => {
+          try {
+            const data = JSON.parse(valueInput.value);
+            valueInput.value = JSON.stringify(data, null, 2);
+          } catch (e) {
+            alert('JSON格式错误: ' + e.message);
+          }
+        };
+
+        const templateBtn = document.createElement('button');
+        templateBtn.type = 'button';
+        templateBtn.className = 'btn-small';
+        templateBtn.textContent = '使用模板';
+        templateBtn.onclick = () => {
+          const template = {
+            "姓名": "角色名称",
+            "出身": "角色背景",
+            "初始天赋": "天赋描述",
+            "初始事件": "初始事件描述",
+            "属性": {
+              "筋骨": 50,
+              "心境": 50,
+              "机缘": 50,
+              "慧根": 50,
+              "福缘": 50,
+              "胆魄": 50,
+              "感知": 50
+            },
+            "生命值": 100,
+            "最大生命值": 100,
+            "灵石": 0,
+            "物品": [],
+            "状态效果": [],
+            "位置": "起始位置",
+            "故事事件": []
+          };
+          valueInput.value = JSON.stringify(template, null, 2);
+          updateGameStateTextarea();
+        };
+
+        const validateBtn = document.createElement('button');
+        validateBtn.type = 'button';
+        validateBtn.className = 'btn-small';
+        validateBtn.textContent = '验证结构';
+        validateBtn.onclick = () => {
+          try {
+            const data = JSON.parse(valueInput.value);
+            const requiredFields = ['姓名', '属性', '生命值', '最大生命值'];
+            const missing = requiredFields.filter(field => !(field in data));
+
+            if (missing.length > 0) {
+              alert('缺少必需字段: ' + missing.join(', '));
+            } else {
+              alert('结构验证通过！');
+            }
+          } catch (e) {
+            alert('JSON格式错误: ' + e.message);
+          }
+        };
+
+        buttonContainer.appendChild(formatBtn);
+        buttonContainer.appendChild(templateBtn);
+        buttonContainer.appendChild(validateBtn);
+
+        // 在textarea后面添加按钮容器
+        valueInput.parentNode.insertBefore(buttonContainer, valueInput.nextSibling);
+      }
+    }
+  });
+}
+
 // 导出函数供主文件使用
 window.editorFunctions = {
   switchEditTab,
@@ -541,5 +692,6 @@ window.editorFunctions = {
   initGameStateEditor,
   initTrialHistoryEditor,
   initCustomFieldsEditor,
+  initCurrentLifeEditor,
   initEditorEvents
 };

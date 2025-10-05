@@ -335,6 +335,8 @@ async def _process_player_action_async(user_info: dict, action: str):
             raise Exception(f"OpenAI Client Error: {ai_json_response_str}")
         json_str = _extract_json_from_response(ai_json_response_str)
         if not json_str:
+            logger.error(f"无法从AI响应中提取JSON，原始响应前500字符: {ai_json_response_str[:500]}")
+            logger.error(f"完整响应长度: {len(ai_json_response_str)} 字符")
             raise json.JSONDecodeError("No JSON found", ai_json_response_str, 0)
         ai_response_data = json.loads(json_str)
 

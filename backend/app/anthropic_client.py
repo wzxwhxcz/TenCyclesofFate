@@ -208,7 +208,7 @@ async def get_ai_response(
                 raise ValueError("AI 响应为空")
             
             ret = ai_message.strip()
-            
+
             # 处理思考标签（如果存在）
             if "<think>" in ret and "</think>" in ret:
                 ret = ret[ret.rfind("</think>") + 8:].strip()
@@ -220,8 +220,11 @@ async def get_ai_response(
                         json_part = json.loads(json_str)
                         return ret
                     else:
+                        # 记录原始响应用于调试
+                        logger.error(f"未找到有效的JSON部分，原始响应: {ret[:500]}")
                         raise ValueError("未找到有效的JSON部分")
                 except Exception as e:
+                    logger.error(f"解析AI响应时出错: {e}, 原始响应: {ret[:500]}")
                     raise ValueError(f"解析AI响应时出错: {e}")
             else:
                 return ret

@@ -549,7 +549,12 @@ async function openEditModal(idOrEnc) {
       window.editorFunctions.initPunishmentEditor(session.pending_punishment);
 
       // 初始化游戏状态编辑器
-      window.editorFunctions.initGameStateEditor(session.game_state);
+      window.editorFunctions.initGameStateEditor(session);
+
+      // 初始化current_life特殊编辑器（在游戏状态编辑器之后）
+      if (window.editorFunctions.initCurrentLifeEditor) {
+        window.editorFunctions.initCurrentLifeEditor(session.current_life);
+      }
 
       // 初始化试炼历史编辑器
       window.editorFunctions.initTrialHistoryEditor(session.trial_history);
@@ -637,7 +642,9 @@ async function saveEdit(e) {
       const gameStateText = document.getElementById('edit-game-state').value.trim();
       if (gameStateText) {
         try {
-          updates.game_state = JSON.parse(gameStateText);
+          const gameStateData = JSON.parse(gameStateText);
+          // 将游戏状态中的字段合并到updates中
+          Object.assign(updates, gameStateData);
         } catch (e) {
           showNotification('游戏状态JSON格式错误', 'error');
           return;

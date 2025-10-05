@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏状态编辑器测试</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        .test-data {
+            font-family: 'Courier New', monospace;
+            background: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .success {
+            color: #48bb78;
+            font-weight: bold;
+        }
+        .error {
+            color: #f56565;
+            font-weight: bold;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 游戏状态编辑器测试</h1>
+
+        <div class="test-section">
+            <h2>测试数据</h2>
+            <p>这是一个包含复杂current_life结构的会话数据：</p>
+            <div class="test-data" id="test-data"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>测试操作</h2>
+            <button onclick="testParseCurrentLife()">测试解析current_life</button>
+            <button onclick="testEditCurrentLife()">测试编辑current_life</button>
+            <button onclick="testSaveGameState()">测试保存游戏状态</button>
+            <button onclick="testValidateStructure()">测试验证结构</button>
+            <div id="result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>编辑器预览</h2>
+            <div id="editor-preview" style="padding: 20px; background: white; border: 1px solid #ddd; border-radius: 5px;">
+                <!-- 编辑器将在这里渲染 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 测试数据
+        const testSession = {
+            "session_date": "2025-10-05",
+            "is_in_trial": true,
+            "is_processing": false,
+            "unchecked_rounds_count": 6,
+            "current_life": {
+                "姓名": "沈望潮",
+                "出身": "东海渔村之子，自幼听闻海中仙音",
+                "初始天赋": "潮汐感知：能感知方圆百里内所有水流变化，在水域环境中判定+15",
+                "初始事件": "月圆之夜出海，被神秘暗流卷入深渊，获得古老海螺与潮汐感知之力",
+                "属性": {
+                    "筋骨": 45,
+                    "心境": 38,
+                    "机缘": 62,
+                    "慧根": 41,
+                    "福缘": 55,
+                    "胆魄": 48,
+                    "感知": 71
+                },
+                "生命值": 100,
+                "最大生命值": 100,
+                "灵石": 1,
+                "物品": [
+                    {
+                        "名称": "神秘海螺",
+                        "数量": 1,
+                        "描述": "散发幽蓝光芒，似乎蕴含着某种力量"
+                    }
+                ],
+                "状态效果": [],
+                "位置": "迷雾岛屿外围沙滩",
+                "故事事件": [
+                    "被暗流卷入海底，获得潮汐感知天赋"
+                ]
+            },
+            "internal_history": [],
+            "display_history": [],
+            "roll_event": null
+        };
+
+        // 显示测试数据
+        document.getElementById('test-data').textContent = JSON.stringify(testSession, null, 2);
+
+        function showResult(message, isSuccess = true) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<span class="${isSuccess ? 'success' : 'error'}">${message}</span>`;
+        }
+
+        function testParseCurrentLife() {
+            try {
+                const currentLife = testSession.current_life;
+
+                // 验证所有必需字段
+                const requiredFields = ['姓名', '属性', '生命值', '最大生命值'];
+                const missing = requiredFields.filter(field => !(field in currentLife));
+
+                if (missing.length > 0) {
+                    showResult(`缺少必需字段: ${missing.join(', ')}`, false);
+                    return;
+                }
+
+                // 验证属性是否为对象
+                if (typeof currentLife.属性 !== 'object') {
+                    showResult('属性字段必须是对象', false);
+                    return;
+                }
+
+                // 验证物品是否为数组
+                if (!Array.isArray(currentLife.物品)) {
+                    showResult('物品字段必须是数组', false);
+                    return;
+                }
+
+                showResult('✅ current_life解析成功！所有字段验证通过。');
+
+                // 显示解析结果
+                const preview = document.getElementById('editor-preview');
+                preview.innerHTML = `
+                    <h3>解析结果</h3>
+                    <p><strong>角色名称:</strong> ${currentLife.姓名}</p>
+                    <p><strong>当前位置:</strong> ${currentLife.位置}</p>
+                    <p><strong>生命值:</strong> ${currentLife.生命值} / ${currentLife.最大生命值}</p>
+                    <p><strong>灵石数量:</strong> ${currentLife.灵石}</p>
+                    <p><strong>物品数量:</strong> ${currentLife.物品.length}</p>
+                    <details>
+                        <summary>属性详情</summary>
+                        <pre>${JSON.stringify(currentLife.属性, null, 2)}</pre>
+                    </details>
+                `;
+            } catch (e) {
+                showResult(`解析失败: ${e.message}`, false);
+            }
+        }
+
+        function testEditCurrentLife() {
+            try {
+                // 模拟编辑current_life
+                const editedLife = JSON.parse(JSON.stringify(testSession.current_life));
+
+                // 修改一些值
+                editedLife.生命值 = 85;
+                editedLife.灵石 = 10;
+                editedLife.物品.push({
+                    "名称": "疗伤丹",
+                    "数量": 3,
+                    "描述": "可恢复20点生命值"
+                });
+                editedLife.位置 = "神秘洞穴入口";
+
+                showResult('✅ current_life编辑成功！');
+
+                // 显示编辑后的数据
+                const preview = document.getElementById('editor-preview');
+                preview.innerHTML = `
+                    <h3>编辑后的数据</h3>
+                    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px;">${JSON.stringify(editedLife, null, 2)}</pre>
+                `;
+            } catch (e) {
+                showResult(`编辑失败: ${e.message}`, false);
+            }
+        }
+
+        function testSaveGameState() {
+            try {
+                // 模拟保存整个游戏状态
+                const updates = {};
+
+                // 将游戏状态字段合并到updates
+                Object.assign(updates, {
+                    session_date: testSession.session_date,
+                    is_in_trial: testSession.is_in_trial,
+                    is_processing: testSession.is_processing,
+                    unchecked_rounds_count: testSession.unchecked_rounds_count,
+                    current_life: testSession.current_life,
+                    roll_event: testSession.roll_event
+                });
+
+                showResult('✅ 游戏状态保存成功！');
+
+                // 显示保存的数据
+                const preview = document.getElementById('editor-preview');
+                preview.innerHTML = `
+                    <h3>保存的更新数据</h3>
+                    <p>更新字段数量: ${Object.keys(updates).length}</p>
+                    <details>
+                        <summary>查看完整数据</summary>
+                        <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px;">${JSON.stringify(updates, null, 2)}</pre>
+                    </details>
+                `;
+            } catch (e) {
+                showResult(`保存失败: ${e.message}`, false);
+            }
+        }
+
+        function testValidateStructure() {
+            try {
+                const currentLife = testSession.current_life;
+                const errors = [];
+
+                // 验证必需字段
+                const requiredFields = {
+                    '姓名': 'string',
+                    '生命值': 'number',
+                    '最大生命值': 'number',
+                    '属性': 'object',
+                    '物品': 'array',
+                    '状态效果': 'array'
+                };
+
+                for (const [field, type] of Object.entries(requiredFields)) {
+                    if (!(field in currentLife)) {
+                        errors.push(`缺少必需字段: ${field}`);
+                    } else {
+                        const actualType = Array.isArray(currentLife[field]) ? 'array' : typeof currentLife[field];
+                        if (actualType !== type) {
+                            errors.push(`字段 ${field} 类型错误: 期望 ${type}，实际 ${actualType}`);
+                        }
+                    }
+                }
+
+                // 验证属性子字段
+                if (currentLife.属性) {
+                    const requiredStats = ['筋骨', '心境', '机缘', '慧根', '福缘', '胆魄'];
+                    for (const stat of requiredStats) {
+                        if (!(stat in currentLife.属性)) {
+                            errors.push(`属性缺少: ${stat}`);
+                        }
+                    }
+                }
+
+                if (errors.length > 0) {
+                    showResult(`验证失败:\n${errors.join('\n')}`, false);
+                } else {
+                    showResult('✅ 结构验证完全通过！所有必需字段和类型都正确。');
+                }
+
+                // 显示验证详情
+                const preview = document.getElementById('editor-preview');
+                preview.innerHTML = `
+                    <h3>结构验证报告</h3>
+                    <p><strong>验证状态:</strong> ${errors.length === 0 ? '✅ 通过' : '❌ 失败'}</p>
+                    <p><strong>检查项目:</strong> ${Object.keys(requiredFields).length} 个必需字段</p>
+                    ${errors.length > 0 ? `
+                        <p><strong>错误列表:</strong></p>
+                        <ul style="color: red;">
+                            ${errors.map(e => `<li>${e}</li>`).join('')}
+                        </ul>
+                    ` : '<p style="color: green;">所有验证项都通过！</p>'}
+                `;
+            } catch (e) {
+                showResult(`验证失败: ${e.message}`, false);
+            }
+        }
+    </script>
+</body>
+</html>
