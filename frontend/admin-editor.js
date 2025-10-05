@@ -31,6 +31,12 @@ function initPunishmentEditor(punishment) {
   const valueInput = document.getElementById('edit-punishment-value');
   const customTextarea = document.getElementById('edit-punishment-custom');
 
+  // 检查元素是否存在
+  if (!typeSelect || !valueInput || !customTextarea) {
+    console.warn('惩罚编辑器元素未找到');
+    return;
+  }
+
   // 重置显示
   valueInput.style.display = 'none';
   customTextarea.style.display = 'none';
@@ -69,6 +75,14 @@ function initGameStateEditor(gameState) {
   const editor = document.getElementById('game-state-editor');
   const textarea = document.getElementById('edit-game-state');
 
+  // 检查元素是否存在
+  if (!editor) {
+    console.warn('游戏状态编辑器容器未找到');
+    return;
+  }
+
+  // textarea 不是必需的，只用作内部数据存储
+
   editor.innerHTML = '';
 
   if (!gameState || typeof gameState !== 'object') {
@@ -93,8 +107,10 @@ function initGameStateEditor(gameState) {
   addBtn.onclick = () => addGameStateField();
   editor.appendChild(addBtn);
 
-  // 更新隐藏的textarea
-  textarea.value = JSON.stringify(gameState, null, 2);
+  // 更新隐藏的textarea（如果存在）
+  if (textarea) {
+    textarea.value = JSON.stringify(gameState, null, 2);
+  }
 }
 
 /**
@@ -158,6 +174,12 @@ window.removeGameStateField = function(btn) {
 function updateGameStateTextarea() {
   const editor = document.getElementById('game-state-editor');
   const textarea = document.getElementById('edit-game-state');
+
+  if (!editor) {
+    console.warn('游戏状态编辑器未找到');
+    return;
+  }
+
   const gameState = {};
 
   editor.querySelectorAll('.json-field').forEach(field => {
@@ -175,7 +197,10 @@ function updateGameStateTextarea() {
     }
   });
 
-  textarea.value = JSON.stringify(gameState, null, 2);
+  // 只在textarea存在时更新
+  if (textarea) {
+    textarea.value = JSON.stringify(gameState, null, 2);
+  }
 }
 
 /**
@@ -184,6 +209,14 @@ function updateGameStateTextarea() {
 function initTrialHistoryEditor(trialHistory) {
   const editor = document.getElementById('trial-history-editor');
   const textarea = document.getElementById('edit-trial-history');
+
+  // 检查元素是否存在
+  if (!editor) {
+    console.warn('试炼历史编辑器容器未找到');
+    return;
+  }
+
+  // textarea 不是必需的，只用作内部数据存储
 
   editor.innerHTML = '';
 
@@ -201,8 +234,10 @@ function initTrialHistoryEditor(trialHistory) {
     editor.innerHTML = '<div style="color: #718096; padding: 10px;">暂无试炼历史，点击"添加记录"创建新记录</div>';
   }
 
-  // 更新隐藏的textarea
-  textarea.value = JSON.stringify(trialHistory, null, 2);
+  // 更新隐藏的textarea（如果存在）
+  if (textarea) {
+    textarea.value = JSON.stringify(trialHistory, null, 2);
+  }
 }
 
 /**
@@ -329,6 +364,13 @@ function updateTrialHistoryTextarea() {
  */
 function initCustomFieldsEditor(session) {
   const editor = document.getElementById('custom-fields-editor');
+
+  // 检查元素是否存在
+  if (!editor) {
+    console.warn('自定义字段编辑器容器未找到');
+    return;
+  }
+
   editor.innerHTML = '';
 
   // 排除已知字段

@@ -530,12 +530,18 @@ async function openEditModal(idOrEnc) {
       window.editorFunctions.switchEditTab('basic');
     }
 
-    // 填充基本字段
-    document.getElementById('edit-player-id').value = session.player_id || '';
-    document.getElementById('edit-opportunities').value = session.opportunities_remaining || 0;
-    document.getElementById('edit-daily-success').value = session.daily_success_achieved ? 'true' : 'false';
-    document.getElementById('edit-current-trial').value = session.current_trial || 1;
-    document.getElementById('edit-trial-count').value = session.trial_count || 0;
+    // 填充基本字段（添加空值检查）
+    const playerIdElem = document.getElementById('edit-player-id');
+    const opportunitiesElem = document.getElementById('edit-opportunities');
+    const dailySuccessElem = document.getElementById('edit-daily-success');
+    const currentTrialElem = document.getElementById('edit-current-trial');
+    const trialCountElem = document.getElementById('edit-trial-count');
+
+    if (playerIdElem) playerIdElem.value = session.player_id || '';
+    if (opportunitiesElem) opportunitiesElem.value = session.opportunities_remaining || 0;
+    if (dailySuccessElem) dailySuccessElem.value = session.daily_success_achieved ? 'true' : 'false';
+    if (currentTrialElem) currentTrialElem.value = session.current_trial || 1;
+    if (trialCountElem) trialCountElem.value = session.trial_count || 0;
 
     // 使用高级编辑器功能（如果可用）
     if (window.editorFunctions) {
@@ -553,10 +559,18 @@ async function openEditModal(idOrEnc) {
     }
 
     // 填充完整会话JSON
-    document.getElementById('edit-full-session').value = JSON.stringify(session, null, 2);
+    const fullSessionElem = document.getElementById('edit-full-session');
+    if (fullSessionElem) {
+      fullSessionElem.value = JSON.stringify(session, null, 2);
+    }
 
     // 显示对话框
-    document.getElementById('edit-modal').classList.add('active');
+    const editModal = document.getElementById('edit-modal');
+    if (editModal) {
+      editModal.classList.add('active');
+    } else {
+      throw new Error('编辑对话框元素未找到');
+    }
   } catch (error) {
     console.error('打开编辑对话框失败:', error);
     showNotification(`打开编辑失败: ${error.message}`, 'error');
