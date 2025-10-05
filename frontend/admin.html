@@ -764,6 +764,156 @@
         margin-top: 24px;
       }
 
+      /* Tab样式 */
+      .edit-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #e2e8f0;
+      }
+
+      .tab-btn {
+        padding: 10px 20px;
+        background: none;
+        border: none;
+        color: #718096;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.2s;
+      }
+
+      .tab-btn:hover {
+        color: #4a5568;
+      }
+
+      .tab-btn.active {
+        color: #667eea;
+      }
+
+      .tab-btn.active::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #667eea;
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+        animation: fadeIn 0.3s;
+      }
+
+      /* 表单行布局 */
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      /* JSON编辑器样式 */
+      .json-editor {
+        background: #f7fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 12px;
+        min-height: 100px;
+      }
+
+      .json-field {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .json-field label {
+        min-width: 120px;
+        font-size: 13px;
+        color: #4a5568;
+      }
+
+      .json-field input,
+      .json-field select {
+        flex: 1;
+        padding: 6px 10px;
+        font-size: 13px;
+      }
+
+      .json-field button {
+        padding: 4px 8px;
+        font-size: 12px;
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      /* 历史记录编辑器 */
+      .history-editor {
+        max-height: 300px;
+        overflow-y: auto;
+        background: #f7fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 12px;
+      }
+
+      .history-item {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 8px;
+      }
+
+      .history-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      /* 惩罚编辑器 */
+      .punishment-editor {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+      }
+
+      .punishment-editor select {
+        min-width: 150px;
+      }
+
+      .punishment-editor input,
+      .punishment-editor textarea {
+        flex: 1;
+      }
+
+      /* 小按钮样式 */
+      .btn-small {
+        padding: 4px 10px;
+        font-size: 12px;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-left: 8px;
+      }
+
+      .btn-small:hover {
+        background: #5a67d8;
+      }
+
       @keyframes fadeIn {
         from {
           opacity: 0;
@@ -907,60 +1057,108 @@
 
     <!-- 编辑会话对话框 -->
     <div class="modal" id="edit-modal">
-      <div class="modal-content">
+      <div class="modal-content" style="max-width: 900px;">
         <div class="modal-header">
           <h2>📝 编辑会话</h2>
           <button class="modal-close" onclick="closeEditModal()">×</button>
         </div>
+
+        <!-- Tab导航 -->
+        <div class="edit-tabs">
+          <button type="button" class="tab-btn active" data-tab="basic">基础信息</button>
+          <button type="button" class="tab-btn" data-tab="advanced">高级编辑</button>
+          <button type="button" class="tab-btn" data-tab="json">JSON编辑</button>
+        </div>
+
         <form id="edit-form">
-          <div class="form-group">
-            <label>玩家ID</label>
-            <input type="text" id="edit-player-id" readonly style="background: #f7fafc;">
+          <!-- 基础信息标签页 -->
+          <div class="tab-content active" id="tab-basic">
+            <div class="form-group">
+              <label>玩家ID</label>
+              <input type="text" id="edit-player-id" readonly style="background: #f7fafc;">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>机缘次数</label>
+                <input type="number" id="edit-opportunities" min="0" max="100">
+              </div>
+
+              <div class="form-group">
+                <label>今日成功状态</label>
+                <select id="edit-daily-success">
+                  <option value="false">未成功</option>
+                  <option value="true">已成功</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>当前试炼</label>
+                <input type="number" id="edit-current-trial" min="1" max="10">
+              </div>
+
+              <div class="form-group">
+                <label>试炼次数</label>
+                <input type="number" id="edit-trial-count" min="0">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>待处理惩罚</label>
+              <div class="punishment-editor">
+                <select id="edit-punishment-type">
+                  <option value="">无惩罚</option>
+                  <option value="punishment">标准惩罚</option>
+                  <option value="custom">自定义</option>
+                </select>
+                <input type="number" id="edit-punishment-value" placeholder="惩罚值" style="display:none;">
+                <textarea id="edit-punishment-custom" placeholder='自定义JSON' style="display:none;"></textarea>
+              </div>
+            </div>
           </div>
-          
-          <div class="form-group">
-            <label>机缘次数 (opportunities_remaining)</label>
-            <input type="number" id="edit-opportunities" min="0" max="100">
+
+          <!-- 高级编辑标签页 -->
+          <div class="tab-content" id="tab-advanced">
+            <div class="form-group">
+              <label>游戏状态 <button type="button" class="btn-small" onclick="formatGameState()">格式化</button></label>
+              <div id="game-state-editor" class="json-editor">
+                <!-- 动态生成的字段编辑器 -->
+              </div>
+              <textarea id="edit-game-state" style="display:none;"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>试炼历史 <button type="button" class="btn-small" onclick="addTrialHistory()">添加记录</button></label>
+              <div id="trial-history-editor" class="history-editor">
+                <!-- 动态生成的历史记录编辑器 -->
+              </div>
+              <textarea id="edit-trial-history" style="display:none;"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>自定义字段</label>
+              <div id="custom-fields-editor">
+                <!-- 动态生成的自定义字段 -->
+              </div>
+              <button type="button" class="btn-small" onclick="addCustomField()">添加字段</button>
+            </div>
           </div>
-          
-          <div class="form-group">
-            <label>今日成功状态 (daily_success_achieved)</label>
-            <select id="edit-daily-success">
-              <option value="false">未成功</option>
-              <option value="true">已成功</option>
-            </select>
+
+          <!-- JSON编辑标签页 -->
+          <div class="tab-content" id="tab-json">
+            <div class="form-group">
+              <label>
+                完整会话JSON
+                <button type="button" class="btn-small" onclick="prettifyJSON()">美化</button>
+                <button type="button" class="btn-small" onclick="validateJSON()">验证</button>
+              </label>
+              <textarea id="edit-full-session" style="min-height: 400px; font-family: 'Courier New', monospace; font-size: 13px;" placeholder='粘贴完整的会话JSON数据，将覆盖所有字段'></textarea>
+              <div id="json-error" style="color: red; margin-top: 5px; display: none;"></div>
+            </div>
           </div>
-          
-          <div class="form-group">
-            <label>当前试炼 (current_trial)</label>
-            <input type="number" id="edit-current-trial" min="1" max="10">
-          </div>
-          
-          <div class="form-group">
-            <label>试炼次数 (trial_count)</label>
-            <input type="number" id="edit-trial-count" min="0">
-          </div>
-          
-          <div class="form-group">
-            <label>游戏状态 (game_state)</label>
-            <textarea id="edit-game-state" placeholder='游戏状态JSON，例如: {"health": 100, "energy": 50}'></textarea>
-          </div>
-          
-          <div class="form-group">
-            <label>试炼历史 (trial_history)</label>
-            <textarea id="edit-trial-history" placeholder='试炼历史数组JSON，例如: [{"trial": 1, "result": "success"}]'></textarea>
-          </div>
-          
-          <div class="form-group">
-            <label>待处理惩罚 (pending_punishment)</label>
-            <textarea id="edit-punishment" placeholder='例如: {"type": "punishment", "value": 1}'></textarea>
-          </div>
-          
-          <div class="form-group">
-            <label>完整会话JSON (直接编辑整个会话)</label>
-            <textarea id="edit-full-session" style="min-height: 200px; font-size: 12px;" placeholder='粘贴完整的会话JSON数据，将覆盖所有字段'></textarea>
-          </div>
-          
+
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" onclick="closeEditModal()">取消</button>
             <button type="submit" class="btn btn-primary">保存修改</button>
@@ -969,6 +1167,7 @@
       </div>
     </div>
 
+    <script src="/admin-editor.js"></script>
     <script type="module" src="/admin.js"></script>
   </body>
 </html>

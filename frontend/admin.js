@@ -506,48 +506,55 @@ function escapeHtml(text) {
 // ==================== 编辑功能 ====================
 
 let currentEditingId = null;
+let currentEditingSession = null;
 
 /**
  * 打开编辑对话框
  */
 async function openEditModal(idOrEnc) {
+  if (!idOrEnc) {
+    showNotification('编辑会话ID不能为空', 'error');
+    return;
+  }
+
   try {
     currentEditingId = idOrEnc;
-    
+    currentEditingSession = null; // 重置当前编辑的会话数据
+
     // 获取会话详情
     const session = await fetchJSON(`/api/admin/session/${encodeURIComponent(idOrEnc)}`);
-    
+    currentEditingSession = session; // 保存当前会话数据
+
+    // 重置到基础信息标签页（使用editorFunctions）
+    if (window.editorFunctions) {
+      window.editorFunctions.switchEditTab('basic');
+    }
+
     // 填充基本字段
     document.getElementById('edit-player-id').value = session.player_id || '';
     document.getElementById('edit-opportunities').value = session.opportunities_remaining || 0;
     document.getElementById('edit-daily-success').value = session.daily_success_achieved ? 'true' : 'false';
     document.getElementById('edit-current-trial').value = session.current_trial || 1;
     document.getElementById('edit-trial-count').value = session.trial_count || 0;
-    
-    // 填充游戏状态
-    if (session.game_state) {
-      document.getElementById('edit-game-state').value = JSON.stringify(session.game_state, null, 2);
-    } else {
-      document.getElementById('edit-game-state').value = '';
+
+    // 使用高级编辑器功能（如果可用）
+    if (window.editorFunctions) {
+      // 初始化惩罚编辑器
+      window.editorFunctions.initPunishmentEditor(session.pending_punishment);
+
+      // 初始化游戏状态编辑器
+      window.editorFunctions.initGameStateEditor(session.game_state);
+
+      // 初始化试炼历史编辑器
+      window.editorFunctions.initTrialHistoryEditor(session.trial_history);
+
+      // 初始化自定义字段编辑器
+      window.editorFunctions.initCustomFieldsEditor(session);
     }
-    
-    // 填充试炼历史
-    if (session.trial_history) {
-      document.getElementById('edit-trial-history').value = JSON.stringify(session.trial_history, null, 2);
-    } else {
-      document.getElementById('edit-trial-history').value = '';
-    }
-    
-    // 处理惩罚字段
-    if (session.pending_punishment) {
-      document.getElementById('edit-punishment').value = JSON.stringify(session.pending_punishment, null, 2);
-    } else {
-      document.getElementById('edit-punishment').value = '';
-    }
-    
+
     // 填充完整会话JSON
     document.getElementById('edit-full-session').value = JSON.stringify(session, null, 2);
-    
+
     // 显示对话框
     document.getElementById('edit-modal').classList.add('active');
   } catch (error) {
@@ -569,15 +576,18 @@ window.closeEditModal = function() {
  */
 async function saveEdit(e) {
   e.preventDefault();
-  
+
   if (!currentEditingId) {
     showNotification('编辑会话ID丢失', 'error');
     return;
   }
-  
+
+  // 保存ID副本，因为closeEditModal会清空它
+  const editingId = currentEditingId;
+
   try {
     let updates = {};
-    
+
     // 检查是否使用完整会话JSON
     const fullSessionText = document.getElementById('edit-full-session').value.trim();
     if (fullSessionText) {
@@ -596,19 +606,19 @@ async function saveEdit(e) {
       if (!isNaN(opportunities)) {
         updates.opportunities_remaining = opportunities;
       }
-      
+
       updates.daily_success_achieved = document.getElementById('edit-daily-success').value === 'true';
-      
+
       const currentTrial = parseInt(document.getElementById('edit-current-trial').value);
       if (!isNaN(currentTrial)) {
         updates.current_trial = currentTrial;
       }
-      
+
       const trialCount = parseInt(document.getElementById('edit-trial-count').value);
       if (!isNaN(trialCount)) {
         updates.trial_count = trialCount;
       }
-      
+
       // 处理游戏状态
       const gameStateText = document.getElementById('edit-game-state').value.trim();
       if (gameStateText) {
@@ -619,7 +629,7 @@ async function saveEdit(e) {
           return;
         }
       }
-      
+
       // 处理试炼历史
       const trialHistoryText = document.getElementById('edit-trial-history').value.trim();
       if (trialHistoryText) {
@@ -630,36 +640,58 @@ async function saveEdit(e) {
           return;
         }
       }
-      
-      // 处理惩罚字段
-      const punishmentText = document.getElementById('edit-punishment').value.trim();
-      if (punishmentText) {
-        try {
-          updates.pending_punishment = JSON.parse(punishmentText);
-        } catch (e) {
-          showNotification('惩罚字段JSON格式错误', 'error');
-          return;
+
+      // 处理惩罚字段（从新的编辑器收集）
+      const punishmentType = document.getElementById('edit-punishment-type').value;
+      if (punishmentType === 'punishment') {
+        const punishmentValue = parseInt(document.getElementById('edit-punishment-value').value);
+        updates.pending_punishment = { type: 'punishment', value: punishmentValue || 1 };
+      } else if (punishmentType === 'custom') {
+        const punishmentText = document.getElementById('edit-punishment-custom').value.trim();
+        if (punishmentText) {
+          try {
+            updates.pending_punishment = JSON.parse(punishmentText);
+          } catch (e) {
+            showNotification('惩罚字段JSON格式错误', 'error');
+            return;
+          }
         }
       } else {
         updates.pending_punishment = null;
       }
+
+      // 处理自定义字段（从高级编辑器收集）
+      const customFields = document.querySelectorAll('[data-custom-field]');
+      customFields.forEach(input => {
+        const key = input.dataset.customField;
+        const value = input.value.trim();
+        if (key && value) {
+          // 尝试解析值类型
+          let parsedValue = value;
+          if (value === 'true') parsedValue = true;
+          else if (value === 'false') parsedValue = false;
+          else if (!isNaN(value) && value !== '') parsedValue = Number(value);
+
+          updates[key] = parsedValue;
+        }
+      });
     }
-    
+
     // 发送更新请求
-    await fetchJSON(`/api/admin/sessions/${encodeURIComponent(currentEditingId)}/update`, {
+    await fetchJSON(`/api/admin/sessions/${encodeURIComponent(editingId)}/update`, {
       method: 'POST',
       body: JSON.stringify(updates)
     });
-    
+
     showNotification('会话更新成功', 'success');
     closeEditModal();
-    
+
     // 重新加载列表
     await loadSessions();
-    
+
     // 如果正在查看这个会话，刷新详情
-    if (currentViewingId === currentEditingId) {
-      await showDetail(currentEditingId);
+    if (currentViewingId === editingId) {
+      await showDetail(editingId);
     }
   } catch (error) {
     console.error('保存编辑失败:', error);
@@ -906,7 +938,12 @@ async function init() {
   
   // 初始化详情面板状态
   initDetailPanel();
-  
+
+  // 初始化高级编辑器事件（如果可用）
+  if (window.editorFunctions && window.editorFunctions.initEditorEvents) {
+    window.editorFunctions.initEditorEvents();
+  }
+
   // 加载数据
   try {
     await loadSessions();
